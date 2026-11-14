@@ -17,8 +17,12 @@ const ACCENT = new THREE.Color('#6ff3ff');
  *  Renderer / scene / camera
  * ------------------------------------------------------------------ */
 const canvas = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+// Retina screens at full 2x cost 4x the pixels; 1.5x looks the same here and is far lighter.
+// The loop below lowers it further if frames start taking too long.
+const MAX_PR = Math.min(window.devicePixelRatio, 1.5);
+let pixelRatio = MAX_PR;
+renderer.setPixelRatio(pixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
@@ -61,7 +65,7 @@ scene.add(world);
  * ------------------------------------------------------------------ */
 {
   const body = new THREE.Mesh(
-    new THREE.SphereGeometry(EARTH_R, 96, 96),
+    new THREE.SphereGeometry(EARTH_R, 64, 64),
     new THREE.ShaderMaterial({
       uniforms: { uRim: { value: new THREE.Color('#2a6bff') } },
       vertexShader: /* glsl */`
@@ -84,7 +88,7 @@ scene.add(world);
   world.add(body);
 
   // Fibonacci dot sphere — a "data globe" surface
-  const n = 9000;
+  const n = 7000;
   const pos = new Float32Array(n * 3);
   const golden = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < n; i++) {
@@ -416,6 +420,11 @@ function pick(clientX, clientY) {
 }
 
 function setHover(faceId, x, y) {
+  if (faceId === hoveredFace && faceId >= 0) {   // same cell: just move the tooltip
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y}px`;
+    return;
+  }
   hoveredFace = faceId;
   if (faceId < 0) {
     state.hoverMesh.visible = false;
@@ -445,11 +454,19 @@ function escapeHTML(s = '') {
   return s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
+// Hover picking runs at most once per frame, and never while dragging.
+let pendingHover = null;
 canvas.addEventListener('pointermove', (e) => {
-  if (e.buttons) { setHover(-1); return; }
-  setHover(pick(e.clientX, e.clientY), e.clientX, e.clientY);
+  if (e.buttons) { if (hoveredFace !== -1) setHover(-1); pendingHover = null; return; }
+  pendingHover = { x: e.clientX, y: e.clientY };
 });
-canvas.addEventListener('pointerleave', () => setHover(-1));
+function processHover() {
+  if (!pendingHover) return;
+  const { x, y } = pendingHover;
+  pendingHover = null;
+  setHover(pick(x, y), x, y);
+}
+canvas.addEventListener('pointerleave', () => { pendingHover = null; setHover(-1); });
 canvas.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY }; controls.autoRotate = false; });
 canvas.addEventListener('pointerup', (e) => {
   if (!downAt) return;
@@ -477,7 +494,6 @@ function openEntry(dayIndex, { fly = true } = {}) {
   el('p-day').textContent = `Day ${String(dayIndex + 1).padStart(3, '0')} · ${formatDate(e.date)}`;
   el('p-title').textContent = e.title;
   el('p-note').textContent = e.note || '';
-  el('p-tags').innerHTML = (e.tags || []).map((t) => `<li>${escapeHTML(t)}</li>`).join('');
   const link = el('p-link');
   if (e.link) { link.href = e.link; link.hidden = false; } else { link.hidden = true; }
   el('prev').disabled = dayIndex === 0;
@@ -491,6 +507,7 @@ function openEntry(dayIndex, { fly = true } = {}) {
 
   state.panelMeshes.forEach((m) => { m.userData.focus = m.userData.dayIndex === dayIndex; });
   if (fly) flyTo(state.faces[state.faceOrder[dayIndex]].centroid, FOCUS_DIST);
+  window.dispatchEvent(new CustomEvent('orbit:open', { detail: { dayIndex } }));
 }
 
 function closePanel() {
@@ -502,12 +519,14 @@ function closePanel() {
   state.panelMeshes.forEach((m) => { m.userData.focus = false; });
   history.replaceState(null, '', location.pathname + location.search);
   flyTo(camera.position.clone(), CAMERA_DIST);
+  window.dispatchEvent(new CustomEvent('orbit:close'));
 }
 
 el('close').addEventListener('click', closePanel);
 el('prev').addEventListener('click', () => openEntry(state.current - 1));
 el('next').addEventListener('click', () => openEntry(state.current + 1));
 window.addEventListener('keydown', (e) => {
+  if (e.target.closest?.('input, textarea, [contenteditable]')) return;
   if (e.key === 'Escape') closePanel();
   if (state.current < 0) return;
   if (e.key === 'ArrowLeft' && state.current > 0) openEntry(state.current - 1);
@@ -550,8 +569,25 @@ function stepFlight(now) {
  *  Loop
  * ------------------------------------------------------------------ */
 const clock = new THREE.Clock();
+let lastFrame = performance.now();
+let slowTime = 0;
+function adaptResolution(now) {
+  const dt = now - lastFrame;
+  lastFrame = now;
+  if (document.hidden || dt > 250) return;          // tab switch, not a slow frame
+  slowTime = dt > 22 ? slowTime + dt : Math.max(0, slowTime - dt * 0.5);
+  if (slowTime > 1000 && pixelRatio > 1) {           // ~1s of sub-45fps frames
+    pixelRatio = Math.max(1, pixelRatio - 0.25);
+    renderer.setPixelRatio(pixelRatio);
+    if (state.nodeMat) state.nodeMat.uniforms.uScale.value = pixelRatio * window.innerHeight * 0.5;
+    slowTime = 0;
+  }
+}
+
 function tick() {
   const now = performance.now();
+  adaptResolution(now);
+  processHover();
   const t = clock.getElapsedTime();
   if (state.nodeMat) state.nodeMat.uniforms.uTime.value = t;
 
@@ -571,7 +607,7 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  if (state.nodeMat) state.nodeMat.uniforms.uScale.value = renderer.getPixelRatio() * window.innerHeight * 0.5;
+  if (state.nodeMat) state.nodeMat.uniforms.uScale.value = pixelRatio * window.innerHeight * 0.5;
 });
 
 /* ------------------------------------------------------------------ *
@@ -591,6 +627,8 @@ async function boot() {
 
   buildNet(entries.length);
   entries.forEach(addPanel);
+  window.orbit = { state, ready: true };
+  window.dispatchEvent(new CustomEvent('orbit:ready'));
 
   // Start facing the newest panel
   world.updateMatrixWorld();

@@ -22,6 +22,7 @@
   <header class="masthead">
     <h1>Design Orbit</h1>
     <p class="count"><span id="filled">0</span> panels lit</p>
+    <p class="edit-badge" id="edit-badge" hidden>Edit mode</p>
   </header>
 
   <div id="tooltip" class="tooltip" hidden></div>
@@ -35,7 +36,16 @@
       <p class="day" id="p-day"></p>
       <h2 id="p-title"></h2>
       <p class="note" id="p-note"></p>
-      <ul class="tags" id="p-tags"></ul>
+      <section class="kw" aria-label="Keywords">
+        <h3>Keywords</h3>
+        <ul class="kw-chips" id="kw-chips"></ul>
+        <div class="kw-search" id="kw-search">
+          <input id="kw-input" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="Search keywords…" role="combobox" aria-expanded="false"
+                 aria-controls="kw-list" aria-autocomplete="list" />
+          <ul class="kw-list" id="kw-list" role="listbox" hidden></ul>
+        </div>
+      </section>
       <a id="p-link" class="link" target="_blank" rel="noopener">View source ↗</a>
     </div>
     <nav class="stepper">
@@ -44,8 +54,15 @@
     </nav>
   </aside>
 
+  <div class="savebar" id="savebar" hidden>
+    <span id="save-status">Unsaved keyword changes</span>
+    <button id="save-download" type="button">Download JSON</button>
+    <button id="save-github" type="button" class="primary">Save to GitHub</button>
+  </div>
+
   <p class="hint">Drag to orbit · Scroll to zoom · Click a lit panel</p>
 
   <script type="module" src="main.js"></script>
+  <script type="module" src="keywords.js"></script>
 </body>
 </html>
