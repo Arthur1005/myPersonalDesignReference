@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/OrbitControls.js';
 /* ------------------------------------------------------------------ *
  *  Config
  * ------------------------------------------------------------------ */
-const EARTH_R = 1.0;          // the planet
+const EARTH_R = 1.22;         // the core (the "earth"); the net sits just outside at NET_R
 const NET_R = 1.38;           // the satellite shell
 const MIN_BANDS = 18;         // 10° latitude bands → ~300 panels; adds bands automatically when full
 const PANEL_ASPECT = 4 / 3;   // target width:height of each window
@@ -64,13 +64,12 @@ scene.add(world);
 }
 
 /* ------------------------------------------------------------------ *
- *  The core (the "earth" inside the net). Three looks to compare:
+ *  The core (the "earth" inside the net). Two looks to compare:
  *   planet  – solid grey globe with a dotted surface (hides the back of the net)
  *   frosted – milky, see-through glass; the back of the net shows faintly through it
- *   today   – a window showing today's entry and your streak
  * ------------------------------------------------------------------ */
-const CORE_MODES = ['planet', 'frosted', 'today'];
-const BACK_FADE = { planet: 1, frosted: 0.3, today: 0.16 };   // how visible the far side of the net is
+const CORE_MODES = ['planet', 'frosted'];
+const BACK_FADE = { planet: 1, frosted: 0.3 };   // how visible the far side of the net is
 const uBackFade = { value: 1 };
 
 const core = {};
@@ -130,7 +129,7 @@ const core = {};
 
   // Soft shadow ring around the core
   core.halo = new THREE.Mesh(
-    new THREE.SphereGeometry(EARTH_R * 1.18, 64, 64),
+    new THREE.SphereGeometry(EARTH_R * 1.12, 64, 64),
     new THREE.ShaderMaterial({
       side: THREE.BackSide,
       transparent: true,
@@ -446,23 +445,20 @@ function addPanel(entry, dayIndex) {
 }
 
 /* ------------------------------------------------------------------ *
- *  Core mode switch + the "today" window
+ *  Core style switch
  * ------------------------------------------------------------------ */
-const coreEl = document.getElementById('core');
 const coreSwitch = document.getElementById('core-switch');
 let coreMode = 'frosted';
 try {
   const q = new URLSearchParams(location.search).get('core');
-  coreMode = CORE_MODES.includes(q) ? q : (CORE_MODES.includes(localStorage.getItem('designOrbit.core')) ? localStorage.getItem('designOrbit.core') : 'frosted');
+  const saved = localStorage.getItem('designOrbit.core');
+  coreMode = CORE_MODES.includes(q) ? q : CORE_MODES.includes(saved) ? saved : 'frosted';
 } catch { /* keep default */ }
-let latestIndex = -1;
 
 function setCoreMode(mode) {
   coreMode = mode;
   core.body.material = mode === 'planet' ? core.solid : core.frost;
-  core.body.visible = mode !== 'today';
   core.dots.visible = mode === 'planet';
-  coreEl.hidden = mode !== 'today';
   coreSwitch.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.core === mode)));
   try { localStorage.setItem('designOrbit.core', mode); } catch { /* ignore */ }
 }
@@ -470,49 +466,6 @@ coreSwitch.addEventListener('click', (e) => {
   const b = e.target.closest('[data-core]');
   if (b) setCoreMode(b.dataset.core);
 });
-
-function localISO(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-function fillCore() {
-  const list = state.entries;
-  latestIndex = list.length - 1;
-  const e = list[latestIndex];
-  const today = localISO();
-  const days = new Set(list.map((x) => x.date));
-  let streak = 0;
-  const d = new Date();
-  if (!days.has(today)) d.setDate(d.getDate() - 1);
-  while (days.has(localISO(d))) { streak++; d.setDate(d.getDate() - 1); }
-  document.getElementById('core-streak').textContent = streak;
-  if (!e) {
-    document.getElementById('core-kicker').textContent = 'Nothing yet';
-    document.getElementById('core-title').textContent = 'Add your first inspiration';
-    return;
-  }
-  document.getElementById('core-img').style.backgroundImage = `url("${encodeURI(e.image)}")`;
-  document.getElementById('core-kicker').textContent = e.date === today ? 'Today' : `Latest · ${formatDate(e.date)} · nothing yet today`;
-  document.getElementById('core-title').textContent = e.title;
-}
-
-const _origin = new THREE.Vector3();
-let coreBox = { x: 0, y: 0, r: 0 };
-function placeCore() {
-  if (coreMode !== 'today') return;
-  _origin.set(0, 0, 0).project(camera);
-  const x = (_origin.x * 0.5 + 0.5) * window.innerWidth;
-  const y = (-_origin.y * 0.5 + 0.5) * window.innerHeight;
-  const dist = camera.position.length();
-  const ang = Math.asin(Math.min(EARTH_R / dist, 0.999));
-  const r = (Math.tan(ang) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * (window.innerHeight / 2);
-  if (Math.abs(r - coreBox.r) > 0.3 || Math.abs(x - coreBox.x) > 0.3 || Math.abs(y - coreBox.y) > 0.3) {
-    coreBox = { x, y, r };
-    coreEl.style.width = coreEl.style.height = `${r * 2}px`;
-    coreEl.style.transform = `translate(${x - r}px, ${y - r}px)`;
-    coreEl.style.setProperty('--r', `${r}px`);
-  }
-}
-const inCore = (x, y) => coreMode === 'today' && latestIndex >= 0 && Math.hypot(x - coreBox.x, y - coreBox.y) < coreBox.r * 0.92;
 
 /* ------------------------------------------------------------------ *
  *  Interaction
@@ -532,7 +485,7 @@ function pick(clientX, clientY) {
 }
 
 function setHover(faceId, x, y) {
-  if (faceId === hoveredFace && faceId >= 0 && coreMode !== 'today') {   // same cell: just move the tooltip
+  if (faceId === hoveredFace && faceId >= 0) {   // same cell: just move the tooltip
     tooltip.style.left = `${x}px`;
     tooltip.style.top = `${y}px`;
     return;
@@ -552,9 +505,6 @@ function setHover(faceId, x, y) {
   if (dayIndex !== undefined) {
     const e = state.entries[dayIndex];
     tooltip.innerHTML = `<span class="d">${String(dayIndex + 1).padStart(3, '0')}</span>${escapeHTML(e.title)}`;
-    canvas.classList.add('pointer');
-  } else if (inCore(x, y)) {
-    tooltip.innerHTML = `<span class="d">${String(latestIndex + 1).padStart(3, '0')}</span>Open ${escapeHTML(state.entries[latestIndex].title)}`;
     canvas.classList.add('pointer');
   } else {
     tooltip.innerHTML = `<span class="d">—</span>Unlit panel`;
@@ -591,7 +541,6 @@ canvas.addEventListener('pointerup', (e) => {
   const faceId = pick(e.clientX, e.clientY);
   const dayIndex = state.faceToEntry.get(faceId);
   if (dayIndex !== undefined) openEntry(dayIndex);
-  else if (inCore(e.clientX, e.clientY)) openEntry(latestIndex);
   else if (faceId < 0) closePanel();
 });
 
@@ -722,7 +671,6 @@ function tick() {
   uBackFade.value += (BACK_FADE[coreMode] - uBackFade.value) * 0.1;
   stepFlight(now);
   if (!flight) controls.update();
-  placeCore();
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
@@ -751,7 +699,6 @@ async function boot() {
 
   buildNet(entries.length);
   entries.forEach(addPanel);
-  fillCore();
   setCoreMode(coreMode);
   window.orbit = {
     state,

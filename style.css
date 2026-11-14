@@ -20,7 +20,6 @@ html, body {
   color: var(--ink);
   overflow: hidden;
 }
-/* background lives on <html> only, so the "today" core (z-index -1) can sit between it and the globe */
 html { background: radial-gradient(ellipse at 50% 40%, #ffffff 0%, #f1f1ef 45%, var(--bg) 100%) fixed; }
 body { background: transparent; }
 
@@ -535,62 +534,7 @@ body.editing .edit-only { display: flex !important; }
 .stepper button:disabled { opacity: 0.3; cursor: default; }
 
 
-/* ---------- Core: "today" window + style switch ---------- */
-.core {
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: -1;               /* behind the transparent globe canvas, so the net draws over it */
-  border-radius: 50%;
-  overflow: hidden;
-  pointer-events: none;
-  background: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 20px 60px rgba(0, 0, 0, 0.08);
-  --r: 200px;
-}
-.core[hidden] { display: none; }
-.core-img {
-  position: absolute;
-  inset: 0;
-  background: #ececea center / cover no-repeat;
-}
-.core::after {             /* frosted rim so the image melts into the globe */
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0.5) 66%, rgba(246, 246, 243, 0.95) 100%);
-}
-.core-text {
-  position: absolute;
-  z-index: 1;
-  left: 18%;
-  right: 18%;
-  bottom: 13%;
-  padding: calc(var(--r) * 0.04) calc(var(--r) * 0.06);
-  text-align: center;
-  background: rgba(255, 255, 255, 0.86);
-  border-radius: calc(var(--r) * 0.08);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-}
-.core-kicker {
-  margin: 0;
-  font-size: max(9px, calc(var(--r) * 0.04));
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-.core-title {
-  margin: 0.25em 0 0.2em;
-  font-size: max(12px, calc(var(--r) * 0.075));
-  font-weight: 500;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.core-streak { margin: 0; font-size: max(10px, calc(var(--r) * 0.045)); color: var(--dim); }
-.core-streak b { color: var(--accent); font-weight: 600; }
-
+/* ---------- Core style switch ---------- */
 .core-switch {
   position: fixed;
   right: 28px;
