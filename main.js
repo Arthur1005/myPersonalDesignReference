@@ -523,6 +523,7 @@ function closePanel() {
 }
 
 el('close').addEventListener('click', closePanel);
+el('scrim').addEventListener('click', closePanel);
 el('prev').addEventListener('click', () => openEntry(state.current - 1));
 el('next').addEventListener('click', () => openEntry(state.current + 1));
 window.addEventListener('keydown', (e) => {

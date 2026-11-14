@@ -161,24 +161,145 @@ function renderList() {
   list.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
 }
 
-/* ---------- chips ---------- */
-function renderChips() {
+/* ---------- chips: floating inside a container ---------- */
+const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const PAD = 8;           // keep chips this far from the container walls
+const GAP = 6;           // minimum space between chips
+const SPEED = 12;        // cruising speed, px per second
+let bodies = [];         // { el, word, x, y, w, h, vx, vy, hover }
+let raf = 0;
+let lastT = 0;
+
+function makeChip(w) {
+  const li = document.createElement('li');
+  const label = document.createElement('span');
+  label.textContent = w;
+  li.appendChild(label);
+  if (editMode) {
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.textContent = '×';
+    x.setAttribute('aria-label', `Remove ${w}`);
+    x.addEventListener('click', () => removeKeyword(w));
+    li.appendChild(x);
+  }
+  return li;
+}
+
+function overlaps(a, b, gap = GAP) {
+  return a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+}
+
+// Grow the box when there are many keywords, so they always have room to drift.
+function fitHeight() {
+  const W = chipsEl.clientWidth || 300;
+  const area = bodies.reduce((s, b) => s + (b.w + GAP * 2) * (b.h + GAP * 2), 0);
+  const H = Math.max(bodies.length ? 132 : 64, Math.ceil((area * 2.1) / W) + PAD * 2);
+  chipsEl.style.height = `${H}px`;
+  return { W, H };
+}
+
+function placeBody(b, W, H, others, near) {
+  for (let tries = 0; tries < 80; tries++) {
+    b.x = near ? near.x + (Math.random() - 0.5) * 60 : PAD + Math.random() * Math.max(1, W - b.w - PAD * 2);
+    b.y = near ? near.y + (Math.random() - 0.5) * 30 : PAD + Math.random() * Math.max(1, H - b.h - PAD * 2);
+    b.x = Math.min(Math.max(b.x, PAD), Math.max(PAD, W - b.w - PAD));
+    b.y = Math.min(Math.max(b.y, PAD), Math.max(PAD, H - b.h - PAD));
+    if (!others.some((o) => overlaps(b, o))) return;
+  }
+}
+
+function renderChips({ added } = {}) {
   const e = entries[current];
   const words = e ? keywordsOf(e) : [];
+  const old = new Map(bodies.map((b) => [b.word, b]));
+  bodies = [];
   chipsEl.innerHTML = '';
   for (const w of words) {
-    const li = document.createElement('li');
-    li.textContent = w;
-    if (editMode) {
-      const x = document.createElement('button');
-      x.type = 'button';
-      x.textContent = '×';
-      x.setAttribute('aria-label', `Remove ${w}`);
-      x.addEventListener('click', () => removeKeyword(w));
-      li.appendChild(x);
+    const prev = old.get(w);
+    const el = prev ? prev.el : makeChip(w);
+    if (prev) el.classList.remove('pop');
+    chipsEl.appendChild(el);
+    const angle = Math.random() * Math.PI * 2;
+    const b = prev || { el, word: w, vx: Math.cos(angle) * SPEED, vy: Math.sin(angle) * SPEED, hover: false, fresh: true };
+    b.w = el.offsetWidth;
+    b.h = el.offsetHeight;
+    bodies.push(b);
+    if (!prev) {
+      el.addEventListener('pointerenter', () => { b.hover = true; el.classList.add('held'); });
+      el.addEventListener('pointerleave', () => { b.hover = false; el.classList.remove('held'); });
     }
-    chipsEl.appendChild(li);
   }
+  const { W, H } = fitHeight();
+  const placed = [];
+  for (const b of bodies) {
+    if (b.fresh) {
+      placeBody(b, W, H, placed, b.word === added ? { x: W / 2 - b.w / 2, y: H / 2 - b.h / 2 } : null);
+      if (b.word === added) b.el.classList.add('pop');
+      b.fresh = false;
+    }
+    placed.push(b);
+    b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
+  }
+  startFloating();
+}
+
+function step(dt) {
+  const W = chipsEl.clientWidth;
+  const H = chipsEl.clientHeight;
+  for (const b of bodies) {
+    if (b.hover) continue;
+    // gentle wander, then ease back to cruising speed
+    b.vx += (Math.random() - 0.5) * 30 * dt;
+    b.vy += (Math.random() - 0.5) * 30 * dt;
+    const sp = Math.hypot(b.vx, b.vy) || 1;
+    const k = 1 + (SPEED / sp - 1) * Math.min(1, dt * 1.5);
+    b.vx *= k; b.vy *= k;
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+    if (b.x < PAD) { b.x = PAD; b.vx = Math.abs(b.vx); }
+    if (b.y < PAD) { b.y = PAD; b.vy = Math.abs(b.vy); }
+    if (b.x + b.w > W - PAD) { b.x = Math.max(PAD, W - PAD - b.w); b.vx = -Math.abs(b.vx); }
+    if (b.y + b.h > H - PAD) { b.y = Math.max(PAD, H - PAD - b.h); b.vy = -Math.abs(b.vy); }
+  }
+  // soft collisions: push apart along the shallower axis and trade velocity
+  for (let i = 0; i < bodies.length; i++) {
+    for (let j = i + 1; j < bodies.length; j++) {
+      const a = bodies[i], c = bodies[j];
+      if (!overlaps(a, c)) continue;
+      const ox = Math.min(a.x + a.w + GAP - c.x, c.x + c.w + GAP - a.x);
+      const oy = Math.min(a.y + a.h + GAP - c.y, c.y + c.h + GAP - a.y);
+      const sa = a.hover ? 0 : c.hover ? 1 : 0.5;   // a held chip doesn't get pushed
+      const sc = 1 - sa;
+      if (ox < oy) {
+        const dir = a.x < c.x ? -1 : 1;
+        a.x += dir * ox * sa; c.x -= dir * ox * sc;
+        if ((c.vx - a.vx) * dir > 0) { const t = a.vx; a.vx = c.vx; c.vx = t; }
+      } else {
+        const dir = a.y < c.y ? -1 : 1;
+        a.y += dir * oy * sa; c.y -= dir * oy * sc;
+        if ((c.vy - a.vy) * dir > 0) { const t = a.vy; a.vy = c.vy; c.vy = t; }
+      }
+    }
+  }
+  for (const b of bodies) b.el.style.transform = `translate3d(${b.x.toFixed(1)}px, ${b.y.toFixed(1)}px, 0)`;
+}
+
+function frame(t) {
+  const dt = Math.min(0.05, (t - lastT) / 1000 || 0);
+  lastT = t;
+  step(dt);
+  raf = requestAnimationFrame(frame);
+}
+function startFloating() {
+  if (reduceMotion || raf || current < 0 || !bodies.length) return;
+  lastT = performance.now();
+  raf = requestAnimationFrame(frame);
+}
+function stopFloating() { cancelAnimationFrame(raf); raf = 0; }
+
+if (window.ResizeObserver) {
+  new ResizeObserver(() => { if (bodies.length) fitHeight(); }).observe(chipsEl);
 }
 
 function setKeywords(e, words) {
@@ -186,7 +307,8 @@ function setKeywords(e, words) {
   delete e.tags;
   drafts[entryKey(e)] = words;
   store.set(LS_DRAFTS, JSON.stringify(drafts));
-  renderChips();
+  renderChips({ added: setKeywords.added });
+  setKeywords.added = null;
   updateSavebar();
 }
 
@@ -194,6 +316,7 @@ function addKeyword(word) {
   const e = entries[current];
   const w = norm(word);
   if (!e || !w || keywordsOf(e).includes(w)) return;
+  setKeywords.added = w;
   setKeywords(e, [...keywordsOf(e), w]);
   input.value = '';
   active = 0;
@@ -351,12 +474,15 @@ function onReady() {
   if (window.orbit.state.current >= 0) { current = window.orbit.state.current; renderChips(); }
 }
 window.addEventListener('orbit:open', (ev) => {
+  const changed = current !== ev.detail.dayIndex;
   current = ev.detail.dayIndex;
   input.value = '';
   list.hidden = true;
-  renderChips();
+  if (changed) bodies = [];      // new panel: scatter its keywords afresh
+  // wait a frame so the panel is laid out before measuring chips
+  requestAnimationFrame(() => renderChips());
 });
-window.addEventListener('orbit:close', () => { current = -1; list.hidden = true; });
+window.addEventListener('orbit:close', () => { current = -1; list.hidden = true; stopFloating(); });
 if (window.orbit?.ready) onReady(); else window.addEventListener('orbit:ready', onReady, { once: true });
 
 fetch('data/keywords.json', { cache: 'no-cache' })
