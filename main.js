@@ -64,33 +64,54 @@ scene.add(world);
 }
 
 /* ------------------------------------------------------------------ *
- *  Earth: dark body + dotted surface + atmosphere
+ *  The core (the "earth" inside the net). Three looks to compare:
+ *   planet  – solid grey globe with a dotted surface (hides the back of the net)
+ *   frosted – milky, see-through glass; the back of the net shows faintly through it
+ *   today   – a window showing today's entry and your streak
  * ------------------------------------------------------------------ */
-{
-  const body = new THREE.Mesh(
-    new THREE.SphereGeometry(EARTH_R, 64, 64),
-    new THREE.ShaderMaterial({
-      uniforms: { uRim: { value: new THREE.Color('#c9c9c4') } },
-      vertexShader: /* glsl */`
-        varying vec3 vN; varying vec3 vView;
-        void main() {
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          vN = normalize(normalMatrix * normal);
-          vView = normalize(-mv.xyz);
-          gl_Position = projectionMatrix * mv;
-        }`,
-      fragmentShader: /* glsl */`
-        uniform vec3 uRim; varying vec3 vN; varying vec3 vView;
-        void main() {
-          float f = pow(1.0 - max(dot(vN, vView), 0.0), 2.2);
-          vec3 base = vec3(0.975, 0.975, 0.968);
-          gl_FragColor = vec4(mix(base, uRim, f), 1.0);
-        }`,
-    })
-  );
-  world.add(body);
+const CORE_MODES = ['planet', 'frosted', 'today'];
+const BACK_FADE = { planet: 1, frosted: 0.3, today: 0.16 };   // how visible the far side of the net is
+const uBackFade = { value: 1 };
 
-  // Fibonacci dot sphere — a "data globe" surface
+const core = {};
+{
+  const sphereVS = /* glsl */`
+    varying vec3 vN; varying vec3 vView;
+    void main() {
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vN = normalize(normalMatrix * normal);
+      vView = normalize(-mv.xyz);
+      gl_Position = projectionMatrix * mv;
+    }`;
+  const geo = new THREE.SphereGeometry(EARTH_R, 64, 64);
+
+  core.solid = new THREE.ShaderMaterial({
+    uniforms: { uRim: { value: new THREE.Color('#c9c9c4') } },
+    vertexShader: sphereVS,
+    fragmentShader: /* glsl */`
+      uniform vec3 uRim; varying vec3 vN; varying vec3 vView;
+      void main() {
+        float f = pow(1.0 - max(dot(vN, vView), 0.0), 2.2);
+        gl_FragColor = vec4(mix(vec3(0.975, 0.975, 0.968), uRim, f), 1.0);
+      }`,
+  });
+  core.frost = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    vertexShader: sphereVS,
+    fragmentShader: /* glsl */`
+      varying vec3 vN; varying vec3 vView;
+      void main() {
+        float f = pow(1.0 - max(dot(vN, vView), 0.0), 1.8);
+        vec3 col = mix(vec3(1.0), vec3(0.80, 0.80, 0.78), f * 0.7);
+        gl_FragColor = vec4(col, 0.58 + 0.34 * f);
+      }`,
+  });
+  core.body = new THREE.Mesh(geo, core.solid);
+  core.body.renderOrder = -1;          // draw the core first; the net draws over it
+  world.add(core.body);
+
+  // Fibonacci dot sphere — a "data globe" surface (planet look only)
   const n = 7000;
   const pos = new Float32Array(n * 3);
   const golden = Math.PI * (3 - Math.sqrt(5));
@@ -102,25 +123,19 @@ scene.add(world);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  world.add(new THREE.Points(g, new THREE.PointsMaterial({
+  core.dots = new THREE.Points(g, new THREE.PointsMaterial({
     color: 0x9a9a94, size: 0.011, transparent: true, opacity: 0.55, depthWrite: false,
-  })));
+  }));
+  world.add(core.dots);
 
-  // Atmosphere halo
-  const halo = new THREE.Mesh(
+  // Soft shadow ring around the core
+  core.halo = new THREE.Mesh(
     new THREE.SphereGeometry(EARTH_R * 1.18, 64, 64),
     new THREE.ShaderMaterial({
       side: THREE.BackSide,
       transparent: true,
       depthWrite: false,
-      vertexShader: /* glsl */`
-        varying vec3 vN; varying vec3 vView;
-        void main() {
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          vN = normalize(normalMatrix * normal);
-          vView = normalize(-mv.xyz);
-          gl_Position = projectionMatrix * mv;
-        }`,
+      vertexShader: sphereVS,
       fragmentShader: /* glsl */`
         varying vec3 vN; varying vec3 vView;
         void main() {
@@ -129,7 +144,25 @@ scene.add(world);
         }`,
     })
   );
-  world.add(halo);
+  world.add(core.halo);
+}
+
+/** Make a built-in material fade where the net faces away from the camera (the far side). */
+function fadeBackside(material) {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uBackFade = uBackFade;
+    shader.vertexShader = 'varying vec3 vWPos;\n' + shader.vertexShader.replace(
+      '#include <project_vertex>',
+      '#include <project_vertex>\n  vWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    shader.fragmentShader = 'uniform float uBackFade;\nvarying vec3 vWPos;\n' + shader.fragmentShader.replace(
+      '#include <dithering_fragment>',
+      `#include <dithering_fragment>
+      {
+        float facing = smoothstep(-0.12, 0.12, dot(normalize(vWPos), normalize(cameraPosition - vWPos)));
+        gl_FragColor.a *= mix(uBackFade, 1.0, facing);
+      }`);
+  };
+  return material;
 }
 
 /* ------------------------------------------------------------------ *
@@ -300,9 +333,9 @@ function buildNet(entryCount) {
   }
   const lineGeo = new THREE.BufferGeometry();
   lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
-  world.add(new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
+  world.add(new THREE.LineSegments(lineGeo, fadeBackside(new THREE.LineBasicMaterial({
     color: NET, transparent: true, opacity: 0.45, depthWrite: false,
-  })));
+  }))));
 
   // Satellite nodes, softly twinkling
   const verts = [...nodeMap.values()];
@@ -320,23 +353,27 @@ function buildNet(entryCount) {
       uMap: { value: makeDotTexture() },
       uColor: { value: NODE },
       uGlow: { value: ACCENT },
+      uBackFade,
       uScale: { value: renderer.getPixelRatio() * window.innerHeight * 0.5 },
     },
     vertexShader: /* glsl */`
-      attribute float phase; uniform float uTime; uniform float uScale; varying float vA;
+      attribute float phase; uniform float uTime; uniform float uScale; varying float vA; varying float vFacing;
       void main() {
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vec3 wp = (modelMatrix * vec4(position, 1.0)).xyz;
+        vFacing = smoothstep(-0.12, 0.12, dot(normalize(wp), normalize(cameraPosition - wp)));
         float tw = 0.55 + 0.45 * sin(uTime * 1.6 + phase);
         vA = tw;
         gl_PointSize = (0.026 + 0.016 * tw) * uScale / -mv.z;
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */`
-      uniform sampler2D uMap; uniform vec3 uColor; uniform vec3 uGlow; varying float vA;
+      uniform sampler2D uMap; uniform vec3 uColor; uniform vec3 uGlow; uniform float uBackFade;
+      varying float vA; varying float vFacing;
       void main() {
         float a = texture2D(uMap, gl_PointCoord).a;
         vec3 col = mix(uColor, uGlow, smoothstep(0.85, 1.0, vA));   // satellites blink blue at their peak
-        gl_FragColor = vec4(col, a * (0.55 + 0.45 * vA));
+        gl_FragColor = vec4(col, a * (0.55 + 0.45 * vA) * mix(uBackFade, 1.0, vFacing));
       }`,
   });
   world.add(new THREE.Points(nodeGeo, nodeMat));
@@ -356,9 +393,9 @@ function buildNet(entryCount) {
   const shell = new THREE.BufferGeometry();
   shell.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   shell.setIndex(idx);
-  const hitMesh = new THREE.Mesh(shell, new THREE.MeshBasicMaterial({
+  const hitMesh = new THREE.Mesh(shell, fadeBackside(new THREE.MeshBasicMaterial({
     color: 0x8a8a85, transparent: true, opacity: 0.035, side: THREE.DoubleSide, depthWrite: false,
-  }));
+  })));
   hitMesh.userData.triCell = triCell;
   world.add(hitMesh);
   state.hitMesh = hitMesh;
@@ -378,9 +415,9 @@ function addPanel(entry, dayIndex) {
   const cell = state.faces[cellId];
   state.faceToEntry.set(cellId, dayIndex);
 
-  const mat = new THREE.MeshBasicMaterial({
+  const mat = fadeBackside(new THREE.MeshBasicMaterial({
     color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
-  });
+  }));
   const mesh = new THREE.Mesh(cellPatch(cell, { gap: PANEL_GAP, r: NET_R * 1.003 }), mat);
   mesh.userData = { dayIndex, cellId, born: performance.now() + dayIndex * 40 };
   world.add(mesh);
@@ -388,7 +425,7 @@ function addPanel(entry, dayIndex) {
 
   const frame = new THREE.LineLoop(
     new THREE.BufferGeometry().setFromPoints(cellOutline(cell, PANEL_GAP * 0.6, NET_R * 1.004)),
-    new THREE.LineBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.9 })
+    fadeBackside(new THREE.LineBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.9 }))
   );
   world.add(frame);
   mesh.userData.frame = frame;
@@ -409,6 +446,75 @@ function addPanel(entry, dayIndex) {
 }
 
 /* ------------------------------------------------------------------ *
+ *  Core mode switch + the "today" window
+ * ------------------------------------------------------------------ */
+const coreEl = document.getElementById('core');
+const coreSwitch = document.getElementById('core-switch');
+let coreMode = 'frosted';
+try {
+  const q = new URLSearchParams(location.search).get('core');
+  coreMode = CORE_MODES.includes(q) ? q : (CORE_MODES.includes(localStorage.getItem('designOrbit.core')) ? localStorage.getItem('designOrbit.core') : 'frosted');
+} catch { /* keep default */ }
+let latestIndex = -1;
+
+function setCoreMode(mode) {
+  coreMode = mode;
+  core.body.material = mode === 'planet' ? core.solid : core.frost;
+  core.body.visible = mode !== 'today';
+  core.dots.visible = mode === 'planet';
+  coreEl.hidden = mode !== 'today';
+  coreSwitch.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.core === mode)));
+  try { localStorage.setItem('designOrbit.core', mode); } catch { /* ignore */ }
+}
+coreSwitch.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-core]');
+  if (b) setCoreMode(b.dataset.core);
+});
+
+function localISO(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function fillCore() {
+  const list = state.entries;
+  latestIndex = list.length - 1;
+  const e = list[latestIndex];
+  const today = localISO();
+  const days = new Set(list.map((x) => x.date));
+  let streak = 0;
+  const d = new Date();
+  if (!days.has(today)) d.setDate(d.getDate() - 1);
+  while (days.has(localISO(d))) { streak++; d.setDate(d.getDate() - 1); }
+  document.getElementById('core-streak').textContent = streak;
+  if (!e) {
+    document.getElementById('core-kicker').textContent = 'Nothing yet';
+    document.getElementById('core-title').textContent = 'Add your first inspiration';
+    return;
+  }
+  document.getElementById('core-img').style.backgroundImage = `url("${encodeURI(e.image)}")`;
+  document.getElementById('core-kicker').textContent = e.date === today ? 'Today' : `Latest · ${formatDate(e.date)} · nothing yet today`;
+  document.getElementById('core-title').textContent = e.title;
+}
+
+const _origin = new THREE.Vector3();
+let coreBox = { x: 0, y: 0, r: 0 };
+function placeCore() {
+  if (coreMode !== 'today') return;
+  _origin.set(0, 0, 0).project(camera);
+  const x = (_origin.x * 0.5 + 0.5) * window.innerWidth;
+  const y = (-_origin.y * 0.5 + 0.5) * window.innerHeight;
+  const dist = camera.position.length();
+  const ang = Math.asin(Math.min(EARTH_R / dist, 0.999));
+  const r = (Math.tan(ang) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * (window.innerHeight / 2);
+  if (Math.abs(r - coreBox.r) > 0.3 || Math.abs(x - coreBox.x) > 0.3 || Math.abs(y - coreBox.y) > 0.3) {
+    coreBox = { x, y, r };
+    coreEl.style.width = coreEl.style.height = `${r * 2}px`;
+    coreEl.style.transform = `translate(${x - r}px, ${y - r}px)`;
+    coreEl.style.setProperty('--r', `${r}px`);
+  }
+}
+const inCore = (x, y) => coreMode === 'today' && latestIndex >= 0 && Math.hypot(x - coreBox.x, y - coreBox.y) < coreBox.r * 0.92;
+
+/* ------------------------------------------------------------------ *
  *  Interaction
  * ------------------------------------------------------------------ */
 const raycaster = new THREE.Raycaster();
@@ -426,7 +532,7 @@ function pick(clientX, clientY) {
 }
 
 function setHover(faceId, x, y) {
-  if (faceId === hoveredFace && faceId >= 0) {   // same cell: just move the tooltip
+  if (faceId === hoveredFace && faceId >= 0 && coreMode !== 'today') {   // same cell: just move the tooltip
     tooltip.style.left = `${x}px`;
     tooltip.style.top = `${y}px`;
     return;
@@ -446,6 +552,9 @@ function setHover(faceId, x, y) {
   if (dayIndex !== undefined) {
     const e = state.entries[dayIndex];
     tooltip.innerHTML = `<span class="d">${String(dayIndex + 1).padStart(3, '0')}</span>${escapeHTML(e.title)}`;
+    canvas.classList.add('pointer');
+  } else if (inCore(x, y)) {
+    tooltip.innerHTML = `<span class="d">${String(latestIndex + 1).padStart(3, '0')}</span>Open ${escapeHTML(state.entries[latestIndex].title)}`;
     canvas.classList.add('pointer');
   } else {
     tooltip.innerHTML = `<span class="d">—</span>Unlit panel`;
@@ -482,6 +591,7 @@ canvas.addEventListener('pointerup', (e) => {
   const faceId = pick(e.clientX, e.clientY);
   const dayIndex = state.faceToEntry.get(faceId);
   if (dayIndex !== undefined) openEntry(dayIndex);
+  else if (inCore(e.clientX, e.clientY)) openEntry(latestIndex);
   else if (faceId < 0) closePanel();
 });
 
@@ -609,8 +719,10 @@ function tick() {
     if (f) f.material.opacity = lit ? 0.55 + 0.45 * Math.sin(t * 5) : hl && hl.size ? 0.3 : 0.9;
   }
 
+  uBackFade.value += (BACK_FADE[coreMode] - uBackFade.value) * 0.1;
   stepFlight(now);
   if (!flight) controls.update();
+  placeCore();
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
@@ -639,6 +751,8 @@ async function boot() {
 
   buildNet(entries.length);
   entries.forEach(addPanel);
+  fillCore();
+  setCoreMode(coreMode);
   window.orbit = {
     state,
     ready: true,

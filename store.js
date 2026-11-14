@@ -173,7 +173,6 @@ async function boot() {
   updateSavebar();
   readyQueue.splice(0).forEach((fn) => fn(entries));
 }
-if (window.orbit?.ready) boot(); else window.addEventListener('orbit:ready', boot, { once: true });
 
 /* ---------- save bar ---------- */
 const savebar = document.getElementById('savebar');
@@ -315,3 +314,6 @@ saveBtn.addEventListener('click', async () => {
     saveBtn.disabled = false;
   }
 });
+
+// Start last, so everything above (save bar, etc.) exists even if the globe is already loaded.
+if (window.orbit?.ready) boot(); else window.addEventListener('orbit:ready', boot, { once: true });

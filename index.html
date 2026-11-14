@@ -17,6 +17,14 @@
   </script>
 </head>
 <body>
+  <div id="core" class="core" hidden aria-hidden="true">
+    <div class="core-img" id="core-img"></div>
+    <div class="core-text">
+      <p class="core-kicker" id="core-kicker"></p>
+      <p class="core-title" id="core-title"></p>
+      <p class="core-streak"><b id="core-streak">0</b> day streak</p>
+    </div>
+  </div>
   <canvas id="scene"></canvas>
 
   <div id="gate" class="gate" hidden>
@@ -147,6 +155,13 @@
     <span id="save-status">Unsaved keyword changes</span>
     <button id="save-download" type="button">Download JSON</button>
     <button id="save-github" type="button" class="primary">Save to GitHub</button>
+  </div>
+
+  <div class="core-switch" id="core-switch" role="group" aria-label="Core style">
+    <span>Core</span>
+    <button type="button" data-core="planet" aria-pressed="false">Planet</button>
+    <button type="button" data-core="frosted" aria-pressed="false">Frosted</button>
+    <button type="button" data-core="today" aria-pressed="false">Today</button>
   </div>
 
   <p class="hint">Drag to orbit · Scroll to zoom · Click a lit panel</p>
