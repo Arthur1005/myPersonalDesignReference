@@ -1,0 +1,317 @@
+/* ------------------------------------------------------------------ *
+ *  Shared editing store
+ *  - edit mode (unlocked with the owner PIN, see gate.js)
+ *  - drafts: per-panel field changes kept in this browser until saved
+ *  - pending image uploads (kept in IndexedDB so a reload doesn't lose them)
+ *  - "Save to GitHub" and "Download" for everything at once
+ * ------------------------------------------------------------------ */
+
+const FALLBACK_REPO = { owner: 'Arthur1005', repo: 'myPersonalDesignReference', branch: 'main' };
+const ENTRIES_PATH = 'data/entries.json';
+export const UPLOAD_DIR = 'entries/similar';
+
+const LS_DRAFTS = 'designOrbit.drafts.v2';
+const LS_DRAFTS_V1 = 'designOrbit.drafts';
+const LS_TOKEN = 'designOrbit.githubToken';
+
+/* ---------- localStorage (can throw in private modes) ---------- */
+export const ls = {
+  get(k, fallback = null) { try { const v = localStorage.getItem(k); return v === null ? fallback : v; } catch { return fallback; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
+  del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
+};
+
+/* ---------- edit mode: owner (PIN) edits, guests only view ---------- */
+import { access } from './gate.js';
+export const editMode = access === 'owner';
+document.body.classList.toggle('editing', editMode);
+
+/* ---------- helpers ---------- */
+export const entryKey = (e) => `${e.date}|${e.title}`;
+export const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- drafts: { entryKey: { field: value } } ---------- */
+let drafts = {};
+try { drafts = JSON.parse(ls.get(LS_DRAFTS, '{}')) || {}; } catch { drafts = {}; }
+// migrate keyword-only drafts from the first version
+try {
+  const v1 = JSON.parse(ls.get(LS_DRAFTS_V1, 'null'));
+  if (v1) {
+    for (const [k, words] of Object.entries(v1)) drafts[k] = { ...(drafts[k] || {}), keywords: words };
+    ls.del(LS_DRAFTS_V1);
+    ls.set(LS_DRAFTS, JSON.stringify(drafts));
+  }
+} catch { /* ignore */ }
+
+const listeners = new Set();
+export function onChange(fn) { listeners.add(fn); }
+function emit() { listeners.forEach((fn) => fn()); updateSavebar(); }
+
+/** Set a field on an entry and remember it as an unsaved draft. */
+export function patch(entry, field, value) {
+  entry[field] = value;
+  if (field === 'keywords') delete entry.tags;
+  if (field === 'links') delete entry.link;
+  const k = entryKey(entry);
+  drafts[k] = { ...(drafts[k] || {}), [field]: value };
+  ls.set(LS_DRAFTS, JSON.stringify(drafts));
+  emit();
+}
+
+function applyPatch(entry, p) {
+  for (const [f, v] of Object.entries(p)) {
+    entry[f] = v;
+    if (f === 'keywords') delete entry.tags;
+    if (f === 'links') delete entry.link;
+  }
+}
+
+/* ---------- pending uploads (IndexedDB) ---------- */
+const pending = new Map();   // path -> { blob, url }  (not yet in the repo)
+const previews = new Map();  // path -> object URL     (local copy to show until the site redeploys)
+let dbp = null;
+function db() {
+  if (!('indexedDB' in window)) return Promise.reject(new Error('no indexedDB'));
+  dbp = dbp || new Promise((res, rej) => {
+    const r = indexedDB.open('designOrbit', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('uploads');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return dbp;
+}
+async function idb(mode, fn) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const tx = d.transaction('uploads', mode);
+    const req = fn(tx.objectStore('uploads'));
+    tx.oncomplete = () => res(req?.result);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+/** Image src for a path: a local preview if it hasn't been uploaded yet. */
+export function srcFor(path) { return previews.get(path) || path; }
+export function isPending(path) { return pending.has(path); }
+
+const slug = (s) => s.toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'image';
+
+/** Shrink big photos before they go into the repo. */
+async function prepareImage(file) {
+  if (/svg|gif/.test(file.type)) return { blob: file, ext: file.type.includes('svg') ? 'svg' : 'gif' };
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * scale);
+    c.height = Math.round(bmp.height * scale);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    let blob = await new Promise((r) => c.toBlob(r, 'image/webp', 0.86));
+    let ext = 'webp';
+    if (!blob || blob.type !== 'image/webp') { blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88)); ext = 'jpg'; }
+    if (blob.size > file.size && scale === 1) return { blob: file, ext: (file.name.split('.').pop() || 'jpg').toLowerCase() };
+    return { blob, ext };
+  } catch {
+    return { blob: file, ext: (file.name.split('.').pop() || 'jpg').toLowerCase() };
+  }
+}
+
+/** Stage an image from the device; returns the repo path it will be saved to. */
+export async function stageUpload(file, entry) {
+  const { blob, ext } = await prepareImage(file);
+  const rand = Math.random().toString(36).slice(2, 7);
+  const path = `${UPLOAD_DIR}/${entry.date}-${slug(file.name)}-${rand}.${ext}`;
+  const url = URL.createObjectURL(blob);
+  pending.set(path, { blob, url });
+  previews.set(path, url);
+  idb('readwrite', (s) => s.put(blob, path)).catch(() => {});
+  updateSavebar();
+  return path;
+}
+
+export function unstageUpload(path) {
+  const p = pending.get(path);
+  if (!p) return;
+  URL.revokeObjectURL(p.url);
+  pending.delete(path);
+  previews.delete(path);
+  idb('readwrite', (s) => s.delete(path)).catch(() => {});
+  updateSavebar();
+}
+
+async function restorePending() {
+  try {
+    const d = await db();
+    await new Promise((res) => {
+      const tx = d.transaction('uploads', 'readonly');
+      const req = tx.objectStore('uploads').openCursor();
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (!cur) return res();
+        const url = URL.createObjectURL(cur.value);
+        pending.set(cur.key, { blob: cur.value, url });
+        previews.set(cur.key, url);
+        cur.continue();
+      };
+      req.onerror = () => res();
+    });
+  } catch { /* no IndexedDB: uploads only live until reload */ }
+}
+
+/* ---------- ready: apply drafts before anyone renders ---------- */
+let entries = [];
+let ready = false;
+const readyQueue = [];
+export function whenReady(fn) { if (ready) fn(entries); else readyQueue.push(fn); }
+export function getEntries() { return entries; }
+
+async function boot() {
+  if (editMode) await restorePending();
+  entries = window.orbit.state.entries;
+  if (editMode) for (const e of entries) { const p = drafts[entryKey(e)]; if (p) applyPatch(e, p); }
+  ready = true;
+  updateSavebar();
+  readyQueue.splice(0).forEach((fn) => fn(entries));
+}
+if (window.orbit?.ready) boot(); else window.addEventListener('orbit:ready', boot, { once: true });
+
+/* ---------- save bar ---------- */
+const savebar = document.getElementById('savebar');
+const statusEl = document.getElementById('save-status');
+
+function updateSavebar(message) {
+  const n = Object.keys(drafts).length;
+  const u = pending.size;
+  savebar.hidden = !editMode || (n === 0 && u === 0 && !message);
+  if (message) { statusEl.textContent = message; return; }
+  const parts = [];
+  if (n) parts.push(`${n} panel${n === 1 ? '' : 's'} changed`);
+  if (u) parts.push(`${u} image${u === 1 ? '' : 's'} to upload`);
+  statusEl.textContent = `Unsaved: ${parts.join(', ')}`;
+}
+
+/* ---------- export ---------- */
+const FIELD_ORDER = ['date', 'title', 'image', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
+function cleanEntry(e) {
+  const out = {};
+  const src = { ...e };
+  if (src.tags && !src.keywords) src.keywords = src.tags;
+  delete src.tags;
+  if (src.links?.length) delete src.link;
+  for (const k of [...FIELD_ORDER, ...Object.keys(src).filter((k) => !FIELD_ORDER.includes(k))]) {
+    const v = src[k];
+    if (v === undefined || v === '' || (Array.isArray(v) && !v.length)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+const byDate = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+export function exportJSON(list) {
+  return JSON.stringify({ entries: [...list].sort(byDate).map(cleanEntry) }, null, 2) + '\n';
+}
+
+function download(name, blob) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+
+document.getElementById('save-download').addEventListener('click', () => {
+  download('entries.json', new Blob([exportJSON(entries)], { type: 'application/json' }));
+  for (const [path, { blob }] of pending) download(path.split('/').pop(), blob);
+  updateSavebar(pending.size
+    ? `Downloaded — replace data/entries.json and put the images in ${UPLOAD_DIR}/`
+    : 'Downloaded — replace data/entries.json with it');
+});
+
+/* ---------- GitHub ---------- */
+function repoInfo() {
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/);
+  const seg = location.pathname.split('/').filter(Boolean)[0];
+  if (m && seg) return { owner: m[1], repo: seg, branch: FALLBACK_REPO.branch };
+  return FALLBACK_REPO;
+}
+function bytesToB64(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+const b64decode = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\n/g, '')), (c) => c.charCodeAt(0)));
+
+class AuthError extends Error {}
+
+async function gh(url, opts, headers) {
+  const res = await fetch(url, { ...opts, headers: { ...headers, ...(opts?.headers || {}) }, cache: 'no-store' });
+  if (res.status === 401 || res.status === 403) throw new AuthError('auth');
+  if (!res.ok) throw new Error(`GitHub said ${res.status}`);
+  return res.json();
+}
+
+const saveBtn = document.getElementById('save-github');
+saveBtn.addEventListener('click', async () => {
+  let token = ls.get(LS_TOKEN);
+  if (!token) {
+    token = window.prompt(
+      'Paste a GitHub fine-grained token with "Contents: Read and write" access to this repo only.\n' +
+      'It is stored in this browser only, and sent only to api.github.com.'
+    );
+    if (!token) return;
+    token = token.trim();
+    ls.set(LS_TOKEN, token);
+  }
+  const { owner, repo, branch } = repoInfo();
+  const api = `https://api.github.com/repos/${owner}/${repo}/contents`;
+  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+  saveBtn.disabled = true;
+  try {
+    // 1. images first, so entries.json never points at a missing file
+    let i = 0;
+    for (const [path, { blob }] of [...pending]) {
+      updateSavebar(`Uploading image ${++i} of ${pending.size}…`);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      await gh(`${api}/${path}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `Add image ${path.split('/').pop()}`, content: bytesToB64(bytes), branch }),
+      }, headers);
+      // keep showing the local copy until the site redeploys, but it's no longer "pending"
+      pending.delete(path);
+      idb('readwrite', (s) => s.delete(path)).catch(() => {});
+    }
+    // 2. entries.json: merge drafts into the latest file so nothing added elsewhere is lost
+    const n = Object.keys(drafts).length;
+    if (n) {
+      updateSavebar('Saving panels…');
+      const file = await gh(`${api}/${ENTRIES_PATH}?ref=${branch}`, {}, headers);
+      const remote = JSON.parse(b64decode(file.content));
+      const list = remote.entries || remote;
+      for (const e of list) { const p = drafts[entryKey(e)]; if (p) applyPatch(e, p); }
+      await gh(`${api}/${ENTRIES_PATH}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Update ${n} panel${n === 1 ? '' : 's'}`,
+          content: bytesToB64(new TextEncoder().encode(exportJSON(list))),
+          sha: file.sha,
+          branch,
+        }),
+      }, headers);
+      drafts = {};
+      ls.del(LS_DRAFTS);
+    }
+    emit();
+    updateSavebar('Saved — live on the site in about a minute');
+    setTimeout(() => updateSavebar(), 4000);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      ls.del(LS_TOKEN);
+      updateSavebar('GitHub rejected the token — try again with a new one');
+    } else {
+      updateSavebar(`Couldn't save: ${err.message}`);
+    }
+  } finally {
+    saveBtn.disabled = false;
+  }
+});

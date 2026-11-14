@@ -2,51 +2,24 @@
  *  Keywords: chips on each panel + a search box with spelling help.
  *
  *  Everyone sees the keywords saved in data/entries.json.
- *  Editing is only shown in edit mode: open the site with ?edit
- *  (it's remembered in this browser; ?edit=off turns it off).
+ *  Editing is only shown to the owner (unlocked with the PIN).
  * ------------------------------------------------------------------ */
 
-// Where "Save to GitHub" writes. Detected automatically on *.github.io.
-const FALLBACK_REPO = { owner: 'Arthur1005', repo: 'myPersonalDesignReference', branch: 'main' };
-const ENTRIES_PATH = 'data/entries.json';
-
-const LS_EDIT = 'designOrbit.edit';
-const LS_DRAFTS = 'designOrbit.drafts';
-const LS_TOKEN = 'designOrbit.githubToken';
+import { editMode, patch, whenReady } from './store.js';
 
 const $ = (id) => document.getElementById(id);
 const chipsEl = $('kw-chips');
 const searchEl = $('kw-search');
 const input = $('kw-input');
 const list = $('kw-list');
-const savebar = $('savebar');
-const saveStatus = $('save-status');
-
-/* ---------- storage (localStorage can throw in private modes) ---------- */
-const store = {
-  get(k, fallback = null) { try { const v = localStorage.getItem(k); return v === null ? fallback : v; } catch { return fallback; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
-  del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
-};
-
-/* ---------- edit mode ---------- */
-const params = new URLSearchParams(location.search);
-if (params.has('edit')) {
-  if (params.get('edit') === 'off') store.del(LS_EDIT); else store.set(LS_EDIT, '1');
-}
-const editMode = store.get(LS_EDIT) === '1';
-$('edit-badge').hidden = !editMode;
 searchEl.hidden = !editMode;
 
 /* ---------- state ---------- */
 let entries = [];
 let current = -1;
 let vocab = [];          // built-in design vocabulary
-let drafts = {};         // { entryKey: [keywords] } — unsaved edits in this browser
-try { drafts = JSON.parse(store.get(LS_DRAFTS, '{}')) || {}; } catch { drafts = {}; }
 
 const norm = (s) => s.toLowerCase().trim().replace(/\s+/g, ' ');
-const entryKey = (e) => `${e.date}|${e.title}`;
 const keywordsOf = (e) => e.keywords || e.tags || [];
 
 function usedKeywords() {
@@ -303,13 +276,9 @@ if (window.ResizeObserver) {
 }
 
 function setKeywords(e, words) {
-  e.keywords = words;
-  delete e.tags;
-  drafts[entryKey(e)] = words;
-  store.set(LS_DRAFTS, JSON.stringify(drafts));
+  patch(e, 'keywords', words);
   renderChips({ added: setKeywords.added });
   setKeywords.added = null;
-  updateSavebar();
 }
 
 function addKeyword(word) {
@@ -357,122 +326,11 @@ list.addEventListener('mousedown', (ev) => {
   if (o && o.kind !== 'have') addKeyword(o.word);
 });
 
-/* ---------- saving ---------- */
-function updateSavebar() {
-  const n = Object.keys(drafts).length;
-  savebar.hidden = !editMode || n === 0;
-  saveStatus.textContent = n === 1 ? 'Unsaved keywords on 1 panel' : `Unsaved keywords on ${n} panels`;
-}
-
-function exportJSON(list_) {
-  const clean = list_.map((e) => {
-    const { date, title, image, note, link } = e;
-    const out = { date, title, image };
-    if (note) out.note = note;
-    if (link) out.link = link;
-    out.keywords = keywordsOf(e);
-    return out;
-  });
-  return JSON.stringify({ entries: clean }, null, 2) + '\n';
-}
-
-$('save-download').addEventListener('click', () => {
-  const blob = new Blob([exportJSON(entries)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'entries.json';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  saveStatus.textContent = 'Downloaded — replace data/entries.json with it';
-});
-
-function repoInfo() {
-  const m = location.hostname.match(/^([^.]+)\.github\.io$/);
-  const seg = location.pathname.split('/').filter(Boolean)[0];
-  if (m && seg) return { owner: m[1], repo: seg, branch: FALLBACK_REPO.branch };
-  return FALLBACK_REPO;
-}
-
-const b64encode = (str) => {
-  const bytes = new TextEncoder().encode(str);
-  let bin = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return btoa(bin);
-};
-const b64decode = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\n/g, '')), (c) => c.charCodeAt(0)));
-
-$('save-github').addEventListener('click', async () => {
-  let token = store.get(LS_TOKEN);
-  if (!token) {
-    token = window.prompt(
-      'Paste a GitHub fine-grained token with "Contents: Read and write" access to this repo only.\n' +
-      'It is stored in this browser only, and sent only to api.github.com.'
-    );
-    if (!token) return;
-    token = token.trim();
-    store.set(LS_TOKEN, token);
-  }
-  const { owner, repo, branch } = repoInfo();
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${ENTRIES_PATH}`;
-  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
-  const btn = $('save-github');
-  btn.disabled = true;
-  saveStatus.textContent = 'Saving…';
-  try {
-    const res = await fetch(`${url}?ref=${branch}`, { headers, cache: 'no-store' });
-    if (res.status === 401 || res.status === 403) throw Object.assign(new Error('auth'), { auth: true });
-    if (!res.ok) throw new Error(`GitHub said ${res.status}`);
-    const file = await res.json();
-    // Merge drafts into the latest file, so entries added since page load are kept.
-    const remote = JSON.parse(b64decode(file.content));
-    const remoteEntries = remote.entries || remote;
-    for (const e of remoteEntries) {
-      const d = drafts[entryKey(e)];
-      if (d) { e.keywords = d; delete e.tags; }
-    }
-    remoteEntries.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-    const put = await fetch(url, {
-      method: 'PUT',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: `Update keywords (${Object.keys(drafts).length} panel${Object.keys(drafts).length === 1 ? '' : 's'})`,
-        content: b64encode(exportJSON(remoteEntries)),
-        sha: file.sha,
-        branch,
-      }),
-    });
-    if (put.status === 401 || put.status === 403) throw Object.assign(new Error('auth'), { auth: true });
-    if (!put.ok) throw new Error(`GitHub said ${put.status}`);
-    drafts = {};
-    store.del(LS_DRAFTS);
-    updateSavebar();
-    savebar.hidden = false;
-    saveStatus.textContent = 'Saved — live on the site in about a minute';
-    setTimeout(updateSavebar, 4000);
-  } catch (err) {
-    if (err.auth) {
-      store.del(LS_TOKEN);
-      saveStatus.textContent = 'GitHub rejected the token — try again with a new one';
-    } else {
-      saveStatus.textContent = `Couldn't save: ${err.message}`;
-    }
-  } finally {
-    btn.disabled = false;
-  }
-});
-
 /* ---------- wiring to the globe ---------- */
-function onReady() {
-  entries = window.orbit.state.entries;
-  if (editMode) {
-    for (const e of entries) {
-      const d = drafts[entryKey(e)];
-      if (d) { e.keywords = d; delete e.tags; }
-    }
-  }
-  updateSavebar();
+whenReady((list_) => {
+  entries = list_;
   if (window.orbit.state.current >= 0) { current = window.orbit.state.current; renderChips(); }
-}
+});
 window.addEventListener('orbit:open', (ev) => {
   const changed = current !== ev.detail.dayIndex;
   current = ev.detail.dayIndex;
@@ -483,7 +341,6 @@ window.addEventListener('orbit:open', (ev) => {
   requestAnimationFrame(() => renderChips());
 });
 window.addEventListener('orbit:close', () => { current = -1; list.hidden = true; stopFloating(); });
-if (window.orbit?.ready) onReady(); else window.addEventListener('orbit:ready', onReady, { once: true });
 
 fetch('data/keywords.json', { cache: 'no-cache' })
   .then((r) => r.json())

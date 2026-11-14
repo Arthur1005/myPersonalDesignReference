@@ -11,7 +11,10 @@ const PANEL_ASPECT = 4 / 3;   // target width:height of each window
 const PANEL_GAP = 0.07;       // gap between a lit panel and its frame (fraction of band height)
 const CAMERA_DIST = 4.2;
 const FOCUS_DIST = 2.75;
-const ACCENT = new THREE.Color('#6ff3ff');
+// Palette: white / grey, with blue as the only highlight colour
+const ACCENT = new THREE.Color('#2a6bff');   // lit panel frames, hover, twinkling satellites
+const NET = new THREE.Color('#77776f');      // the net lines
+const NODE = new THREE.Color('#4a4a45');     // satellites at rest
 
 /* ------------------------------------------------------------------ *
  *  Renderer / scene / camera
@@ -56,7 +59,7 @@ scene.add(world);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   scene.add(new THREE.Points(g, new THREE.PointsMaterial({
-    color: 0x8fa6c8, size: 0.06, sizeAttenuation: true, transparent: true, opacity: 0.55, depthWrite: false,
+    color: 0xb9b9b3, size: 0.05, sizeAttenuation: true, transparent: true, opacity: 0.5, depthWrite: false,
   })));
 }
 
@@ -67,7 +70,7 @@ scene.add(world);
   const body = new THREE.Mesh(
     new THREE.SphereGeometry(EARTH_R, 64, 64),
     new THREE.ShaderMaterial({
-      uniforms: { uRim: { value: new THREE.Color('#2a6bff') } },
+      uniforms: { uRim: { value: new THREE.Color('#c9c9c4') } },
       vertexShader: /* glsl */`
         varying vec3 vN; varying vec3 vView;
         void main() {
@@ -79,9 +82,9 @@ scene.add(world);
       fragmentShader: /* glsl */`
         uniform vec3 uRim; varying vec3 vN; varying vec3 vView;
         void main() {
-          float f = pow(1.0 - max(dot(vN, vView), 0.0), 3.0);
-          vec3 base = vec3(0.015, 0.03, 0.07);
-          gl_FragColor = vec4(base + uRim * f * 0.9, 1.0);
+          float f = pow(1.0 - max(dot(vN, vView), 0.0), 2.2);
+          vec3 base = vec3(0.975, 0.975, 0.968);
+          gl_FragColor = vec4(mix(base, uRim, f), 1.0);
         }`,
     })
   );
@@ -100,7 +103,7 @@ scene.add(world);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   world.add(new THREE.Points(g, new THREE.PointsMaterial({
-    color: 0x3c7bd9, size: 0.012, transparent: true, opacity: 0.6, depthWrite: false,
+    color: 0x9a9a94, size: 0.011, transparent: true, opacity: 0.55, depthWrite: false,
   })));
 
   // Atmosphere halo
@@ -109,7 +112,6 @@ scene.add(world);
     new THREE.ShaderMaterial({
       side: THREE.BackSide,
       transparent: true,
-      blending: THREE.AdditiveBlending,
       depthWrite: false,
       vertexShader: /* glsl */`
         varying vec3 vN; varying vec3 vView;
@@ -123,7 +125,7 @@ scene.add(world);
         varying vec3 vN; varying vec3 vView;
         void main() {
           float f = pow(max(dot(vN, vView), 0.0), 2.5);
-          gl_FragColor = vec4(vec3(0.2, 0.5, 1.0) * f, f * 0.6);
+          gl_FragColor = vec4(vec3(0.55, 0.55, 0.52), f * 0.12);
         }`,
     })
   );
@@ -139,8 +141,8 @@ function makeDotTexture() {
   const ctx = c.getContext('2d');
   const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
   grad.addColorStop(0, 'rgba(255,255,255,1)');
-  grad.addColorStop(0.25, 'rgba(180,250,255,0.9)');
-  grad.addColorStop(1, 'rgba(111,243,255,0)');
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.95)');
+  grad.addColorStop(0.6, 'rgba(255,255,255,0)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 64, 64);
   const t = new THREE.CanvasTexture(c);
@@ -299,7 +301,7 @@ function buildNet(entryCount) {
   const lineGeo = new THREE.BufferGeometry();
   lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
   world.add(new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
-    color: ACCENT, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false,
+    color: NET, transparent: true, opacity: 0.45, depthWrite: false,
   })));
 
   // Satellite nodes, softly twinkling
@@ -313,10 +315,11 @@ function buildNet(entryCount) {
   const nodeMat = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
     uniforms: {
       uTime: { value: 0 },
       uMap: { value: makeDotTexture() },
+      uColor: { value: NODE },
+      uGlow: { value: ACCENT },
       uScale: { value: renderer.getPixelRatio() * window.innerHeight * 0.5 },
     },
     vertexShader: /* glsl */`
@@ -329,8 +332,12 @@ function buildNet(entryCount) {
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */`
-      uniform sampler2D uMap; varying float vA;
-      void main() { vec4 c = texture2D(uMap, gl_PointCoord); gl_FragColor = vec4(c.rgb, c.a * vA); }`,
+      uniform sampler2D uMap; uniform vec3 uColor; uniform vec3 uGlow; varying float vA;
+      void main() {
+        float a = texture2D(uMap, gl_PointCoord).a;
+        vec3 col = mix(uColor, uGlow, smoothstep(0.85, 1.0, vA));   // satellites blink blue at their peak
+        gl_FragColor = vec4(col, a * (0.55 + 0.45 * vA));
+      }`,
   });
   world.add(new THREE.Points(nodeGeo, nodeMat));
   state.nodeMat = nodeMat;
@@ -350,16 +357,14 @@ function buildNet(entryCount) {
   shell.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   shell.setIndex(idx);
   const hitMesh = new THREE.Mesh(shell, new THREE.MeshBasicMaterial({
-    color: ACCENT, transparent: true, opacity: 0.02, side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending, depthWrite: false,
+    color: 0x8a8a85, transparent: true, opacity: 0.035, side: THREE.DoubleSide, depthWrite: false,
   }));
   hitMesh.userData.triCell = triCell;
   world.add(hitMesh);
   state.hitMesh = hitMesh;
 
   const hoverMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
-    color: ACCENT, transparent: true, opacity: 0.16, side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending, depthWrite: false,
+    color: ACCENT, transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false,
   }));
   hoverMesh.visible = false;
   world.add(hoverMesh);
@@ -383,7 +388,7 @@ function addPanel(entry, dayIndex) {
 
   const frame = new THREE.LineLoop(
     new THREE.BufferGeometry().setFromPoints(cellOutline(cell, PANEL_GAP * 0.6, NET_R * 1.004)),
-    new THREE.LineBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending })
+    new THREE.LineBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.9 })
   );
   world.add(frame);
   mesh.userData.frame = frame;
@@ -495,8 +500,6 @@ function openEntry(dayIndex, { fly = true } = {}) {
   el('p-day').textContent = `Day ${String(dayIndex + 1).padStart(3, '0')} · ${formatDate(e.date)}`;
   el('p-title').textContent = e.title;
   el('p-note').textContent = e.note || '';
-  const link = el('p-link');
-  if (e.link) { link.href = e.link; link.hidden = false; } else { link.hidden = true; }
   el('prev').disabled = dayIndex === 0;
   el('next').disabled = dayIndex === state.entries.length - 1;
 

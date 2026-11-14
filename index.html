@@ -19,10 +19,30 @@
 <body>
   <canvas id="scene"></canvas>
 
+  <div id="gate" class="gate" hidden>
+    <div class="gate-card" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+      <p class="gate-kicker">Design Orbit</p>
+      <h2 id="gate-title">Enter your PIN</h2>
+      <p class="gate-sub">Owners can add and edit. Guests can look around.</p>
+      <div class="pin" role="group" aria-label="6-digit PIN">
+        <input inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Digit 1" />
+        <input inputmode="numeric" maxlength="6" aria-label="Digit 2" />
+        <input inputmode="numeric" maxlength="6" aria-label="Digit 3" />
+        <input inputmode="numeric" maxlength="6" aria-label="Digit 4" />
+        <input inputmode="numeric" maxlength="6" aria-label="Digit 5" />
+        <input inputmode="numeric" maxlength="6" aria-label="Digit 6" />
+      </div>
+      <p class="gate-error" id="gate-error" role="alert" hidden></p>
+      <label class="gate-remember"><input type="checkbox" id="gate-remember" /> Remember on this device</label>
+      <div class="gate-or"><span>or</span></div>
+      <button type="button" class="gate-guest" id="gate-guest">Continue as guest</button>
+    </div>
+  </div>
+
   <header class="masthead">
     <h1>Design Orbit</h1>
     <p class="count"><span id="filled">0</span> panels lit</p>
-    <p class="edit-badge" id="edit-badge" hidden>Edit mode</p>
+    <button type="button" class="role" id="role" hidden></button>
   </header>
 
   <div id="tooltip" class="tooltip" hidden></div>
@@ -74,7 +94,39 @@
           <ul class="kw-list" id="kw-list" role="listbox" hidden></ul>
         </div>
       </section>
-      <a id="p-link" class="link" target="_blank" rel="noopener">View source ↗</a>
+      <section class="sec" id="links-sec" aria-label="Links">
+        <h3>Links</h3>
+        <ul class="links" id="links"></ul>
+        <form class="add-link edit-only" id="link-form" novalidate>
+          <select id="link-type" aria-label="Link type">
+            <option value="website">Website</option>
+            <option value="image">Image</option>
+            <option value="source">Source</option>
+          </select>
+          <input id="link-url" type="text" inputmode="url" placeholder="Paste a link…" aria-label="Link URL" />
+          <button type="submit">Add</button>
+        </form>
+        <p class="form-error" id="link-error" hidden></p>
+      </section>
+
+      <section class="sec" id="similar-sec" aria-label="Similar projects">
+        <h3>Similar projects</h3>
+        <ul class="similar" id="similar"></ul>
+        <label class="drop edit-only" id="similar-drop">
+          <input type="file" id="similar-file" accept="image/*" multiple />
+          <span>+ Add from your device</span>
+          <small>or drop images here</small>
+        </label>
+      </section>
+
+      <section class="sec" id="comments-sec" aria-label="Comments">
+        <h3>Comments</h3>
+        <ol class="comments" id="comments"></ol>
+        <form class="add-comment edit-only" id="comment-form" novalidate>
+          <textarea id="comment-text" rows="2" maxlength="2000" placeholder="Write a comment…  (⌘/Ctrl + Enter to post)" aria-label="Comment"></textarea>
+          <button type="submit">Post</button>
+        </form>
+      </section>
     </div>
     <nav class="stepper">
       <button id="prev" aria-label="Previous day">← Prev</button>
@@ -90,8 +142,10 @@
 
   <p class="hint">Drag to orbit · Scroll to zoom · Click a lit panel</p>
 
+  <script type="module" src="gate.js"></script>
   <script type="module" src="main.js"></script>
   <script type="module" src="keywords.js"></script>
+  <script type="module" src="details.js"></script>
   <script type="module" src="calendar.js"></script>
 </body>
 </html>

@@ -14,37 +14,50 @@ The net is made of bands of rectangular windows, like a geodesic dome of screens
      "title": "Swiss poster, 1959",
      "image": "entries/2026-11-15-swiss-poster.jpg",
      "note": "Why it inspired me…",
-     "link": "https://source-of-the-work",
+     "links": [{ "type": "source", "url": "https://source-of-the-work" }],
      "keywords": ["poster", "swiss style", "typography"]
    }
    ```
 
 3. Commit and push. The panel lights up on the next page load.
 
-Entries are sorted by `date`, so the order in the file doesn't matter. `note`, `link` and `keywords` are optional.
+Entries are sorted by `date`, so the order in the file doesn't matter. Everything after `image` is optional, and
+`similar` / `comments` are easiest to add from the site itself.
 The net starts with ~300 panels (10° bands) and automatically adds bands when you outgrow it (378, then 458, …). Images are cropped to fill their window, centred, and always stay upright.
 
 The three `sample` entries are placeholders. Delete them (and their SVGs in `entries/`) once you've added your own.
 
-## Keywords
+## Owner PIN and guests
 
-Each panel has a **Keywords** section. To edit keywords, open the site with `?edit` on the end of the address
-(e.g. `https://arthur1005.github.io/myPersonalDesignReference/?edit`). Your browser remembers it; `?edit=off` turns it off.
-Visitors never see the editing controls.
+Visitors are asked for a 6-digit PIN or can **Continue as guest**:
 
-In edit mode:
+- **Owner (PIN)**: can add and edit keywords, links, similar projects and comments. Tick *Remember on this device* to skip the PIN next time.
+- **Guest**: view only — no editing controls are shown.
 
-- Type in the search box under the keywords. Suggestions come from `data/keywords.json` (~300 design terms) plus any
-  keyword you've used before. If you misspell something, the corrected word is suggested first ("did you mean?").
-- `↑` / `↓` to choose, `Enter` to add, `Backspace` in an empty box removes the last keyword, `×` removes any keyword.
-- Anything not in the list can still be added as a new keyword.
-- Changes are kept in your browser as a draft until you save:
-  - **Save to GitHub** writes them straight into `data/entries.json` in this repo. The first time, it asks for a
-    [fine-grained token](https://github.com/settings/personal-access-tokens/new) — give it access to **only this repo**
-    with **Contents: Read and write**. It's stored in that browser only. The site updates about a minute later.
-  - **Download JSON** gives you the updated `entries.json` to commit yourself.
+Use the **Owner · Lock** / **Guest · Unlock** button under the title to switch.
 
-To grow the suggestion list, add words to `data/keywords.json`.
+The PIN is stored only as a slow PBKDF2 hash in `gate.js` (with instructions there for changing it). Since this is a static
+site, the PIN locks the editing *interface*; what actually protects the repo is the GitHub token below, which only
+lives in your own browser. Without it, nobody can save anything.
+
+## Editing a panel (owner)
+
+Open any lit panel. Under the image:
+
+- **Keywords**: they float in their container. Type in the search box to add more: suggestions come from
+  `data/keywords.json` (~300 design terms) plus keywords you've used before, and misspellings get a "did you mean?"
+  correction first. `↑`/`↓` + `Enter` to add, `×` to remove (hover a keyword to stop it moving).
+- **Links**: paste a link, tag it **Website**, **Image** or **Source**. As many as you like.
+- **Similar projects**: **+ Add from your device** (or drag images in). Big photos are resized to 1600px and saved as WebP
+  into `entries/similar/`. Each gets an editable caption.
+- **Comments**: dated notes on the panel (`⌘/Ctrl + Enter` to post).
+
+Changes are kept in your browser as a draft (images too, so a reload won't lose them) until you save:
+
+- **Save to GitHub** uploads new images, then merges your changes into `data/entries.json`. The first time, it asks for a
+  [fine-grained token](https://github.com/settings/personal-access-tokens/new) with access to **only this repo** and
+  **Contents: Read and write**. The site updates about a minute later.
+- **Download JSON** gives you the updated `entries.json` (and any new images) to commit yourself.
 
 ## Progress calendar
 
@@ -88,10 +101,13 @@ The site will appear at `https://<username>.github.io/myPersonalDesignReference/
 index.html          page shell
 style.css           styles
 main.js             the globe (Three.js)
-keywords.js         keyword chips, search, spelling suggestions, saving
+gate.js             PIN / guest entry screen
+store.js            drafts, image uploads, Save to GitHub / Download
+keywords.js         floating keyword chips, search, spelling suggestions
+details.js          links, similar projects, comments
 calendar.js         progress calendar and streaks
 data/entries.json   your archive
 data/keywords.json  vocabulary for keyword suggestions
-entries/            images
+entries/            images (entries/similar/ for similar projects)
 vendor/             Three.js r170 (MIT), vendored so there's no CDN dependency
 ```
