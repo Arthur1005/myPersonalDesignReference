@@ -5,7 +5,7 @@ The net is made of bands of rectangular windows, like a geodesic dome of screens
 
 ## Add today's inspiration
 
-**From the site (owner):** unlock with your PIN (“I’m Arthur”), then press **+ Add** (top right).
+**From the site (owner):** unlock with the lock icon (bottom left), then press **+ Add** (top right).
 Choose, drop or paste an image, give it a title (the date defaults to today) and optionally a note, and press
 **Light up a panel**. The panel appears on the globe straight away and opens so you can add keywords, links, similar
 projects and comments. Press **Save to GitHub** when you're done: the image goes into `entries/` and the entry into
@@ -30,14 +30,13 @@ The net starts with ~300 panels (10° bands) and automatically adds bands when y
 
 The three `sample` entries are placeholders. Delete them (and their SVGs in `entries/`) once you've added your own.
 
-## Owner PIN and guests
+## Welcome panel and owner login
 
-Visitors land on **Enter as guest**. A small **I’m Arthur** link underneath leads to the 6-digit PIN:
+Visitors see a short welcome panel (once per browser session) and then browse the site read-only.
 
-- **Owner (PIN)**: can add and edit keywords, links, similar projects and comments. Tick *Remember on this device* to skip the PIN next time.
-- **Guest**: view only — no editing controls are shown.
-
-Use the **Owner · Lock** / **Guest · Unlock** button under the title to switch.
+To edit, click the **lock icon** in the bottom-left corner and type your 6-digit PIN. The page reloads with editing
+unlocked: the lock turns blue and **+ Add** appears. Tick *Remember on this device* to stay unlocked on that browser;
+click the lock again and choose **Lock** to go back to view-only.
 
 The PIN is stored only as a slow PBKDF2 hash in `gate.js` (with instructions there for changing it). Since this is a static
 site, the PIN locks the editing *interface*; what actually protects the repo is the GitHub token below, which only
@@ -104,7 +103,7 @@ The site will appear at `https://<username>.github.io/myPersonalDesignReference/
 index.html          page shell
 style.css           styles
 main.js             the globe (Three.js)
-gate.js             PIN / guest entry screen
+gate.js             welcome panel + owner login (lock icon)
 store.js            drafts, image uploads, Save to GitHub / Download
 keywords.js         floating keyword chips, search, spelling suggestions
 details.js          links, similar projects, comments

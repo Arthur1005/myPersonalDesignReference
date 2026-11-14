@@ -21,37 +21,16 @@
 
   <div id="gate" class="gate" hidden>
     <div class="gate-card" role="dialog" aria-modal="true" aria-labelledby="gate-title">
-      <div class="gate-step" id="gate-step-guest">
-        <p class="gate-kicker">Design Orbit</p>
-        <h2 id="gate-title">A daily design reference</h2>
-        <p class="gate-sub">One piece of inspiration a day, stitched into a net around the globe.</p>
-        <button type="button" class="gate-guest" id="gate-guest">Enter as guest</button>
-        <button type="button" class="gate-owner-link" id="gate-owner">I’m Arthur</button>
-      </div>
-
-      <div class="gate-step" id="gate-step-pin" hidden>
-        <button type="button" class="gate-back" id="gate-back">← Back</button>
-        <h2>Hi Arthur</h2>
-        <p class="gate-sub">Enter your PIN to edit.</p>
-        <div class="pin" role="group" aria-label="6-digit PIN">
-          <input inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Digit 1" />
-          <input inputmode="numeric" maxlength="6" aria-label="Digit 2" />
-          <input inputmode="numeric" maxlength="6" aria-label="Digit 3" />
-          <input inputmode="numeric" maxlength="6" aria-label="Digit 4" />
-          <input inputmode="numeric" maxlength="6" aria-label="Digit 5" />
-          <input inputmode="numeric" maxlength="6" aria-label="Digit 6" />
-        </div>
-        <p class="gate-error" id="gate-error" role="alert" hidden></p>
-        <label class="gate-remember"><input type="checkbox" id="gate-remember" /> Remember on this device</label>
-      </div>
+      <p class="gate-kicker">Design Orbit</p>
+      <h2 id="gate-title">A daily design reference</h2>
+      <p class="gate-sub">One piece of inspiration a day, stitched into a net around the globe.</p>
+      <button type="button" class="gate-enter" id="gate-enter">Enter</button>
     </div>
-  </div>
   </div>
 
   <header class="masthead">
     <h1>Design Orbit</h1>
     <p class="count"><span id="filled">0</span> panels lit</p>
-    <button type="button" class="role" id="role" hidden></button>
   </header>
 
   <div id="tooltip" class="tooltip" hidden></div>
@@ -177,6 +156,34 @@
       <button id="next" aria-label="Next day">Next →</button>
     </nav>
   </aside>
+
+  <div class="owner" id="owner">
+    <button type="button" class="lock-btn" id="lock-btn" aria-expanded="false" aria-controls="lock-pop" aria-label="Owner login" title="Owner login">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+        <path class="shackle" d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+      </svg>
+    </button>
+    <div class="lock-pop" id="lock-pop" role="dialog" aria-label="Owner login" hidden>
+      <div id="lock-login">
+        <p class="lock-title">Owner PIN</p>
+        <div class="pin" role="group" aria-label="6-digit PIN">
+          <input inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Digit 1" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 2" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 3" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 4" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 5" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 6" />
+        </div>
+        <p class="gate-error" id="gate-error" role="alert" hidden></p>
+        <label class="gate-remember"><input type="checkbox" id="gate-remember" /> Remember on this device</label>
+      </div>
+      <div id="lock-owner" hidden>
+        <p class="lock-title">Editing is unlocked</p>
+        <button type="button" class="lock-out" id="lock-out">Lock</button>
+      </div>
+    </div>
+  </div>
 
   <div class="savebar" id="savebar" hidden>
     <span id="save-status">Unsaved keyword changes</span>
