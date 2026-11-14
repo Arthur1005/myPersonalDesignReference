@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Design Orbit — a daily design reference</title>
+  <meta name="description" content="One piece of design inspiration a day, stitched into a net around the globe." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27none%27 stroke=%27%236ff3ff%27 stroke-width=%272%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%276%27 fill=%27%232a6bff%27/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.module.min.js",
+        "three/addons/OrbitControls.js": "./vendor/OrbitControls.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <header class="masthead">
+    <h1>Design Orbit</h1>
+    <p class="count"><span id="filled">0</span> panels lit</p>
+  </header>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+
+  <aside id="panel" class="panel" aria-hidden="true">
+    <button class="close" id="close" aria-label="Close">×</button>
+    <figure>
+      <img id="p-image" alt="" />
+    </figure>
+    <div class="meta">
+      <p class="day" id="p-day"></p>
+      <h2 id="p-title"></h2>
+      <p class="note" id="p-note"></p>
+      <ul class="tags" id="p-tags"></ul>
+      <a id="p-link" class="link" target="_blank" rel="noopener">View source ↗</a>
+    </div>
+    <nav class="stepper">
+      <button id="prev" aria-label="Previous day">← Prev</button>
+      <button id="next" aria-label="Next day">Next →</button>
+    </nav>
+  </aside>
+
+  <p class="hint">Drag to orbit · Scroll to zoom · Click a lit panel</p>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

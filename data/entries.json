@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "date": "2026-11-12",
+      "title": "Sample — Bauhaus overlap",
+      "image": "entries/2026-11-12-sample.svg",
+      "note": "Placeholder entry. Replace with something that inspired you: what caught your eye, and why.",
+      "link": "",
+      "tags": ["sample", "poster", "geometry"]
+    },
+    {
+      "date": "2026-11-13",
+      "title": "Sample — Radial gradient study",
+      "image": "entries/2026-11-13-sample.svg",
+      "note": "Placeholder entry. Soft gradients with thin concentric rings.",
+      "link": "",
+      "tags": ["sample", "colour"]
+    },
+    {
+      "date": "2026-11-14",
+      "title": "Sample — Acid grid",
+      "image": "entries/2026-11-14-sample.svg",
+      "note": "Placeholder entry. A brutalist block grid in a single neon tone.",
+      "link": "",
+      "tags": ["sample", "layout", "type"]
+    }
+  ]
+}

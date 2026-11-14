@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <rect width="1200" height="900" fill="#0d0d0d"/>
+  <g fill="#d7ff3a">
+    <rect x="100" y="100" width="300" height="300"/><rect x="450" y="100" width="140" height="300"/>
+    <rect x="640" y="100" width="460" height="140"/><rect x="640" y="260" width="220" height="140"/>
+    <rect x="100" y="450" width="140" height="350"/><rect x="290" y="450" width="810" height="350" fill="none" stroke="#d7ff3a" stroke-width="6"/>
+  </g>
+  <text x="330" y="660" font-family="Helvetica, Arial, sans-serif" font-size="120" font-weight="800" fill="#d7ff3a">GRID</text>
+</svg>

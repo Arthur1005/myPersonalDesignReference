@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <rect width="1200" height="900" fill="#f2ede4"/>
+  <circle cx="420" cy="450" r="260" fill="#e2492f"/>
+  <rect x="560" y="190" width="420" height="520" fill="#1d2a6b" style="mix-blend-mode:multiply"/>
+  <rect x="140" y="760" width="920" height="14" fill="#111"/>
+  <text x="140" y="150" font-family="Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#111">FORM / 01</text>
+</svg>
