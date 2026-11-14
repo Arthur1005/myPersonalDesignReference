@@ -610,7 +610,7 @@ function setHover(faceId, x, y, mouse = true) {
     } else if (mouse) {
       html = following
         ? '<span class="dot"></span>Following your cursor<small>Click to release</small>'
-        : 'Drag to turn<small>Click once and the globe follows your cursor</small>';
+        : 'Drag to turn<small><b class="hl">Click once</b> and the globe follows your cursor</small>';
     }
     tooltip.innerHTML = html;
     tooltip.hidden = !html;
