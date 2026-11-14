@@ -271,6 +271,12 @@ function startFloating() {
 }
 function stopFloating() { cancelAnimationFrame(raf); raf = 0; }
 
+// When a web font (e.g. Organo) finishes loading, chip sizes change: measure again.
+document.fonts?.addEventListener?.('loadingdone', () => {
+  for (const b of bodies) { b.w = b.el.offsetWidth; b.h = b.el.offsetHeight; }
+  if (bodies.length) fitHeight();
+});
+
 if (window.ResizeObserver) {
   new ResizeObserver(() => { if (bodies.length) fitHeight(); }).observe(chipsEl);
 }

@@ -1,3 +1,22 @@
+/* ---------- Fonts (see fonts/README.md) ---------- */
+@font-face { font-family: "Orbitron"; font-weight: 500; font-display: swap; src: url("fonts/orbitron/orbitron-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Orbitron"; font-weight: 700; font-display: swap; src: url("fonts/orbitron/orbitron-latin-700-normal.woff2") format("woff2"); }
+@font-face {
+  font-family: "Octarine"; font-weight: 300; font-display: swap;
+  src: url("fonts/octarine/Octarine-Light.woff2") format("woff2"), url("fonts/octarine/Octarine-Light.woff") format("woff"),
+       url("fonts/octarine/Octarine-Light.otf") format("opentype"), url("fonts/octarine/Octarine-Light.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Octarine"; font-weight: 700; font-display: swap;
+  src: url("fonts/octarine/Octarine-Bold.woff2") format("woff2"), url("fonts/octarine/Octarine-Bold.woff") format("woff"),
+       url("fonts/octarine/Octarine-Bold.otf") format("opentype"), url("fonts/octarine/Octarine-Bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Organo"; font-display: swap;
+  src: url("fonts/organo/Organo.woff2") format("woff2"), url("fonts/organo/Organo.woff") format("woff"),
+       url("fonts/organo/Organo.otf") format("opentype"), url("fonts/organo/Organo.ttf") format("truetype");
+}
+
 :root {
   /* white / grey, with blue as the only highlight colour */
   --bg: #e6e6e3;
@@ -9,6 +28,9 @@
   --panel-bg: rgba(255, 255, 255, 0.97);
   --line: rgba(0, 0, 0, 0.12);
   --field: rgba(0, 0, 0, 0.035);
+  --font-logo: "Orbitron", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-title: "Octarine", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-keyword: "Organo", "Inter", ui-sans-serif, system-ui, sans-serif;
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -42,13 +64,15 @@ body { background: transparent; }
 }
 .masthead h1 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.32em;
+  font-family: var(--font-logo);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 .masthead .count {
-  margin: 6px 0 0;
+  margin: 10px 0 0;
   font-size: 12px;
   color: var(--dim);
   letter-spacing: 0.08em;
@@ -140,7 +164,7 @@ body.panel-open .scrim { opacity: 1; visibility: visible; transition: opacity 0.
   text-transform: uppercase;
   color: var(--accent);
 }
-.panel h2 { margin: 8px 0 14px; font-size: 24px; font-weight: 500; line-height: 1.2; }
+.panel h2 { margin: 8px 0 14px; font-family: var(--font-title); font-size: 26px; font-weight: 700; line-height: 1.15; }
 .panel .note { margin: 0 0 18px; color: var(--ink-2); line-height: 1.6; font-size: 14px; }
 /* Keywords */
 .kw { margin: 0 0 22px; }
@@ -161,6 +185,7 @@ body.panel-open .scrim { opacity: 1; visibility: visible; transition: opacity 0.
 .kw-chips:empty { height: 64px; display: grid; place-items: center; }
 .kw-chips:empty::before { content: "No keywords yet"; font-size: 12px; color: var(--dim); }
 .kw-chips li {
+  font-family: var(--font-keyword);
   position: absolute;
   top: 0;
   left: 0;
@@ -275,8 +300,8 @@ body.gated .masthead, body.gated .cal-toggle, body.gated .hint { visibility: hid
 }
 .gate.shake .gate-card { animation: gate-shake 0.4s; }
 @keyframes gate-shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
-.gate-kicker { margin: 0; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); }
-.gate-card h2 { margin: 10px 0 6px; font-size: 22px; font-weight: 500; }
+.gate-kicker { margin: 0; font-family: var(--font-logo); font-size: 24px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); }
+.gate-card h2 { margin: 14px 0 6px; font-family: var(--font-title); font-size: 22px; font-weight: 700; }
 .gate-sub { margin: 0 0 22px; font-size: 13px; color: var(--dim); }
 .pin { display: flex; justify-content: center; gap: 8px; }
 .pin input {
@@ -602,7 +627,7 @@ body.gated .core-switch, body.panel-open .core-switch { visibility: hidden; }
 @keyframes cal-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
 .cal-head { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
-.cal-head h2 { flex: 1; margin: 0; font-size: 15px; font-weight: 500; text-align: center; }
+.cal-head h2 { flex: 1; margin: 0; font-family: var(--font-title); font-size: 17px; font-weight: 700; text-align: center; }
 .cal-nav, .cal-close {
   width: 28px; height: 28px;
   border-radius: 50%;
@@ -672,7 +697,7 @@ body.gated .core-switch, body.panel-open .core-switch { visibility: hidden; }
 
 .cal-day { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .cal-day:empty { display: none; }
-.cal-day h3 { margin: 0 0 10px; font-size: 13px; font-weight: 500; }
+.cal-day h3 { margin: 0 0 10px; font-family: var(--font-title); font-size: 14px; font-weight: 700; }
 .cal-day h3 em { font-style: normal; color: var(--accent); }
 .cal-empty { margin: 0; font-size: 12px; color: var(--dim); }
 .cal-entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }

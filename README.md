@@ -110,4 +110,5 @@ data/entries.json   your archive
 data/keywords.json  vocabulary for keyword suggestions
 entries/            images (entries/similar/ for similar projects)
 vendor/             Three.js r170 (MIT), vendored so there's no CDN dependency
+fonts/              Orbitron (logo), Octarine (titles), Organo (keywords), see fonts/README.md
 ```
