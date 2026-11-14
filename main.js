@@ -6,8 +6,9 @@ import { OrbitControls } from 'three/addons/OrbitControls.js';
  * ------------------------------------------------------------------ */
 const EARTH_R = 1.0;          // the planet
 const NET_R = 1.38;           // the satellite shell
-const MIN_DETAIL = 3;         // 20 * (3+1)^2 = 320 panels to start; grows automatically
-const PANEL_INSET = 0.9;      // how much each lit panel shrinks inside its cell
+const MIN_BANDS = 18;         // 10° latitude bands → ~300 panels; adds bands automatically when full
+const PANEL_ASPECT = 4 / 3;   // target width:height of each window
+const PANEL_GAP = 0.07;       // gap between a lit panel and its frame (fraction of band height)
 const CAMERA_DIST = 4.2;
 const FOCUS_DIST = 2.75;
 const ACCENT = new THREE.Color('#6ff3ff');
@@ -150,12 +151,12 @@ function formatDate(iso) {
 }
 
 /* ------------------------------------------------------------------ *
- *  Build the net once we know how many entries there are
+ *  The net: bands of quad "windows" wrapped around the globe
  * ------------------------------------------------------------------ */
 const state = {
   entries: [],
-  faces: [],          // [{ a, b, c, centroid }]
-  faceOrder: [],      // faceOrder[dayIndex] = faceId
+  faces: [],          // cells: { lat0, lat1, lon0, lon1, centroid, aspect }
+  faceOrder: [],      // faceOrder[dayIndex] = cellId
   faceToEntry: new Map(),
   panelMeshes: [],
   hitMesh: null,
@@ -163,54 +164,145 @@ const state = {
   current: -1,
 };
 
-function buildNet(entryCount) {
-  let detail = MIN_DETAIL;
-  while (20 * (detail + 1) ** 2 < entryCount) detail++;
+const DEG = Math.PI / 180;
 
-  const geo = new THREE.IcosahedronGeometry(NET_R, detail); // non-indexed
-  const p = geo.attributes.position;
-  const faceCount = p.count / 3;
+function sph(lat, lon, r = NET_R) {
+  const c = Math.cos(lat);
+  return new THREE.Vector3(r * c * Math.sin(lon), r * Math.sin(lat), r * c * Math.cos(lon));
+}
 
-  for (let f = 0; f < faceCount; f++) {
-    const a = new THREE.Vector3().fromBufferAttribute(p, f * 3);
-    const b = new THREE.Vector3().fromBufferAttribute(p, f * 3 + 1);
-    const c = new THREE.Vector3().fromBufferAttribute(p, f * 3 + 2);
-    const centroid = a.clone().add(b).add(c).divideScalar(3);
-    state.faces.push({ a, b, c, centroid });
+// Lay out latitude bands; each band holds as many ~4:3 windows as fit,
+// so panels stay roughly the same size from equator to pole.
+function layoutCells(bands) {
+  const dLat = Math.PI / bands;
+  const cells = [];
+  for (let b = 1; b < bands - 1; b++) {            // skip the two polar caps
+    const lat0 = -Math.PI / 2 + b * dLat;
+    const lat1 = lat0 + dLat;
+    const latC = (lat0 + lat1) / 2;
+    const cols = Math.max(3, Math.round((2 * Math.PI * Math.cos(latC)) / (dLat * PANEL_ASPECT)));
+    const dLon = (2 * Math.PI) / cols;
+    const shift = ((b * 0.382) % 1) * dLon;          // brick-like stagger between bands
+    for (let c = 0; c < cols; c++) {
+      const lon0 = shift + c * dLon - Math.PI;
+      const lon1 = lon0 + dLon;
+      cells.push({
+        band: b, lat0, lat1, lon0, lon1,
+        centroid: sph(latC, (lon0 + lon1) / 2),
+        aspect: (Math.cos(latC) * dLon) / dLat,
+      });
+    }
   }
+  return { cells, dLat };
+}
 
-  // Order the panels as a spiral growing outward from a starting point,
-  // so the archive fills the sphere like a spreading patch of light.
-  const start = new THREE.Vector3(0.25, 0.55, 1).normalize();
+// A curved patch of sphere covering one cell (optionally inset), with upright UVs.
+function cellPatch(cell, { gap = 0, r = NET_R, segs = 6 } = {}) {
+  const latC = (cell.lat0 + cell.lat1) / 2;
+  const gLat = (cell.lat1 - cell.lat0) * gap;
+  const gLon = gLat / Math.max(Math.cos(latC), 0.2);
+  const la0 = cell.lat0 + gLat, la1 = cell.lat1 - gLat;
+  const lo0 = cell.lon0 + gLon, lo1 = cell.lon1 - gLon;
+  const pos = [], uv = [], idx = [];
+  for (let j = 0; j <= segs; j++) {
+    for (let i = 0; i <= segs; i++) {
+      const u = i / segs, v = j / segs;
+      const p = sph(THREE.MathUtils.lerp(la0, la1, v), THREE.MathUtils.lerp(lo0, lo1, u), r);
+      pos.push(p.x, p.y, p.z);
+      uv.push(u, v);
+    }
+  }
+  for (let j = 0; j < segs; j++) {
+    for (let i = 0; i < segs; i++) {
+      const a = j * (segs + 1) + i, b = a + 1, c = a + segs + 1, d = c + 1;
+      idx.push(a, b, d, a, d, c);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  return g;
+}
+
+function cellOutline(cell, gap, r, n = 8) {
+  const latC = (cell.lat0 + cell.lat1) / 2;
+  const gLat = (cell.lat1 - cell.lat0) * gap;
+  const gLon = gLat / Math.max(Math.cos(latC), 0.2);
+  const la0 = cell.lat0 + gLat, la1 = cell.lat1 - gLat;
+  const lo0 = cell.lon0 + gLon, lo1 = cell.lon1 - gLon;
+  const pts = [];
+  for (let i = 0; i < n; i++) pts.push(sph(la0, THREE.MathUtils.lerp(lo0, lo1, i / n), r));
+  for (let i = 0; i < n; i++) pts.push(sph(THREE.MathUtils.lerp(la0, la1, i / n), lo1, r));
+  for (let i = 0; i < n; i++) pts.push(sph(la1, THREE.MathUtils.lerp(lo1, lo0, i / n), r));
+  for (let i = 0; i < n; i++) pts.push(sph(THREE.MathUtils.lerp(la1, la0, i / n), lo0, r));
+  return pts;
+}
+
+function buildNet(entryCount) {
+  let bands = MIN_BANDS;
+  let layout = layoutCells(bands);
+  while (layout.cells.length < entryCount) layout = layoutCells((bands += 2));
+  const { cells, dLat } = layout;
+  state.faces = cells;
+
+  // Fill order: a patch spreading outward from a point just above the equator.
+  const start = sph(8 * DEG, 0, 1);
   const ref = new THREE.Vector3(0, 1, 0);
   const u = new THREE.Vector3().crossVectors(ref, start).normalize();
   const v = new THREE.Vector3().crossVectors(start, u);
-  state.faceOrder = state.faces
-    .map((f, id) => {
-      const dir = f.centroid.clone().normalize();
+  state.faceOrder = cells
+    .map((c, id) => {
+      const dir = c.centroid.clone().normalize();
       const ang = Math.acos(THREE.MathUtils.clamp(dir.dot(start), -1, 1));
       const az = Math.atan2(dir.dot(v), dir.dot(u));
-      return { id, key: Math.round(ang * 40) * 10 + (az + Math.PI) };
+      return { id, key: Math.round(ang * 30) * 10 + (az + Math.PI) };
     })
     .sort((x, y) => x.key - y.key)
     .map((o) => o.id);
 
-  // Net lines (the "protection" mesh)
-  const edges = new THREE.EdgesGeometry(geo, 0.01);
-  world.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
-    color: ACCENT, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false,
+  // Net lines: latitude rings + the vertical struts between windows
+  const seg = [];
+  const pushArc = (pts) => { for (let i = 0; i < pts.length - 1; i++) seg.push(...pts[i].toArray(), ...pts[i + 1].toArray()); };
+  const bands0 = Math.round(Math.PI / dLat);
+  for (let b = 1; b < bands0; b++) {
+    const lat = -Math.PI / 2 + b * dLat;
+    const ring = [];
+    for (let i = 0; i <= 160; i++) ring.push(sph(lat, (i / 160) * Math.PI * 2));
+    pushArc(ring);
+  }
+  const nodeMap = new Map();
+  const addNode = (p) => { const k = p.toArray().map((x) => x.toFixed(3)).join(); if (!nodeMap.has(k)) nodeMap.set(k, p); };
+  for (const c of cells) {
+    const arc = [];
+    for (let i = 0; i <= 4; i++) arc.push(sph(THREE.MathUtils.lerp(c.lat0, c.lat1, i / 4), c.lon0));
+    pushArc(arc);
+    addNode(arc[0]);
+    addNode(arc[4]);
+  }
+  // Poles: a satellite at each, with spokes to the nearest ring
+  for (const s of [1, -1]) {
+    const pole = new THREE.Vector3(0, s * NET_R, 0);
+    addNode(pole);
+    const lat = s * (Math.PI / 2 - dLat);
+    for (let k = 0; k < 8; k++) {
+      const lon = (k / 8) * Math.PI * 2;
+      const arc = [];
+      for (let i = 0; i <= 4; i++) arc.push(sph(THREE.MathUtils.lerp(lat, s * Math.PI / 2, i / 4), lon));
+      pushArc(arc);
+    }
+  }
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
+  world.add(new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
+    color: ACCENT, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false,
   })));
 
-  // Satellite nodes at every vertex, softly twinkling
-  const uniq = new Map();
-  for (let i = 0; i < p.count; i++) {
-    const k = `${p.getX(i).toFixed(4)},${p.getY(i).toFixed(4)},${p.getZ(i).toFixed(4)}`;
-    if (!uniq.has(k)) uniq.set(k, [p.getX(i), p.getY(i), p.getZ(i)]);
-  }
-  const verts = [...uniq.values()];
+  // Satellite nodes, softly twinkling
+  const verts = [...nodeMap.values()];
   const nodePos = new Float32Array(verts.length * 3);
   const phase = new Float32Array(verts.length);
-  verts.forEach((vv, i) => { nodePos.set(vv, i * 3); phase[i] = Math.random() * Math.PI * 2; });
+  verts.forEach((vv, i) => { nodePos.set(vv.toArray(), i * 3); phase[i] = Math.random() * Math.PI * 2; });
   const nodeGeo = new THREE.BufferGeometry();
   nodeGeo.setAttribute('position', new THREE.BufferAttribute(nodePos, 3));
   nodeGeo.setAttribute('phase', new THREE.BufferAttribute(phase, 1));
@@ -229,30 +321,40 @@ function buildNet(entryCount) {
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         float tw = 0.55 + 0.45 * sin(uTime * 1.6 + phase);
         vA = tw;
-        gl_PointSize = (0.028 + 0.018 * tw) * uScale / -mv.z;
+        gl_PointSize = (0.026 + 0.016 * tw) * uScale / -mv.z;
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */`
       uniform sampler2D uMap; varying float vA;
       void main() { vec4 c = texture2D(uMap, gl_PointCoord); gl_FragColor = vec4(c.rgb, c.a * vA); }`,
   });
-  const nodes = new THREE.Points(nodeGeo, nodeMat);
-  world.add(nodes);
+  world.add(new THREE.Points(nodeGeo, nodeMat));
   state.nodeMat = nodeMat;
 
-  // Invisible-ish shell used for picking + a faint shield tint
-  const hitMesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-    color: ACCENT, transparent: true, opacity: 0.025, side: THREE.FrontSide,
+  // One combined shell for picking (+ a faint shield tint); triangle -> cell lookup
+  const pos = [], idx = [], triCell = [];
+  cells.forEach((c, id) => {
+    const g = cellPatch(c, { segs: 3 });
+    const base = pos.length / 3;
+    pos.push(...g.attributes.position.array);
+    const ix = g.index.array;
+    for (let i = 0; i < ix.length; i++) idx.push(ix[i] + base);
+    for (let t = 0; t < ix.length / 3; t++) triCell.push(id);
+    g.dispose();
+  });
+  const shell = new THREE.BufferGeometry();
+  shell.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  shell.setIndex(idx);
+  const hitMesh = new THREE.Mesh(shell, new THREE.MeshBasicMaterial({
+    color: ACCENT, transparent: true, opacity: 0.02, side: THREE.DoubleSide,
     blending: THREE.AdditiveBlending, depthWrite: false,
   }));
+  hitMesh.userData.triCell = triCell;
   world.add(hitMesh);
   state.hitMesh = hitMesh;
 
-  // Hover highlight triangle
-  const hg = new THREE.BufferGeometry();
-  hg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
-  const hoverMesh = new THREE.Mesh(hg, new THREE.MeshBasicMaterial({
-    color: ACCENT, transparent: true, opacity: 0.18, side: THREE.DoubleSide,
+  const hoverMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
+    color: ACCENT, transparent: true, opacity: 0.16, side: THREE.DoubleSide,
     blending: THREE.AdditiveBlending, depthWrite: false,
   }));
   hoverMesh.visible = false;
@@ -260,54 +362,23 @@ function buildNet(entryCount) {
   state.hoverMesh = hoverMesh;
 }
 
-function insetTriangle(face, k, lift = 1.004) {
-  const c = face.centroid;
-  return [face.a, face.b, face.c].map((p) => p.clone().sub(c).multiplyScalar(k).add(c).multiplyScalar(lift));
-}
-
-// Map an image onto a triangle so it stays upright relative to the globe's north,
-// "cover"-fitting the triangle's bounding box (image aspect assumed ~4:3).
-function uprightUVs(tri, aspect = 4 / 3) {
-  const n = tri[0].clone().add(tri[1]).add(tri[2]).normalize();
-  let up = new THREE.Vector3(0, 1, 0).projectOnPlane(n);
-  if (up.lengthSq() < 1e-6) up = new THREE.Vector3(0, 0, -1).projectOnPlane(n);
-  up.normalize();
-  const right = new THREE.Vector3().crossVectors(up, n).normalize();
-  const pts = tri.map((p) => [p.dot(right), p.dot(up)]);
-  const xs = pts.map((q) => q[0]);
-  const ys = pts.map((q) => q[1]);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  let w = maxX - minX, h = maxY - minY;
-  // expand the shorter side so the image isn't stretched
-  if (w / h > aspect) h = w / aspect; else w = h * aspect;
-  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-  return pts.flatMap(([x, y]) => [(x - cx) / w + 0.5, (y - cy) / h + 0.5]);
-}
-
 const loader = new THREE.TextureLoader();
 
 function addPanel(entry, dayIndex) {
-  const faceId = state.faceOrder[dayIndex];
-  const face = state.faces[faceId];
-  state.faceToEntry.set(faceId, dayIndex);
-
-  const [a, b, c] = insetTriangle(face, PANEL_INSET);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([...a.toArray(), ...b.toArray(), ...c.toArray()]), 3));
-  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uprightUVs([a, b, c])), 2));
+  const cellId = state.faceOrder[dayIndex];
+  const cell = state.faces[cellId];
+  state.faceToEntry.set(cellId, dayIndex);
 
   const mat = new THREE.MeshBasicMaterial({
     color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
   });
-  const mesh = new THREE.Mesh(g, mat);
-  mesh.userData = { dayIndex, faceId, born: performance.now() + dayIndex * 40 };
+  const mesh = new THREE.Mesh(cellPatch(cell, { gap: PANEL_GAP, r: NET_R * 1.003 }), mat);
+  mesh.userData = { dayIndex, cellId, born: performance.now() + dayIndex * 40 };
   world.add(mesh);
   state.panelMeshes.push(mesh);
 
-  // glowing frame
   const frame = new THREE.LineLoop(
-    new THREE.BufferGeometry().setFromPoints(insetTriangle(face, PANEL_INSET + 0.04, 1.005)),
+    new THREE.BufferGeometry().setFromPoints(cellOutline(cell, PANEL_GAP * 0.6, NET_R * 1.004)),
     new THREE.LineBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending })
   );
   world.add(frame);
@@ -315,6 +386,11 @@ function addPanel(entry, dayIndex) {
   loader.load(entry.image, (tex) => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    // "cover" fit: crop the image to the panel's proportions, centred
+    const ia = tex.image.width / tex.image.height;
+    const pa = cell.aspect * (1 - 2 * PANEL_GAP);
+    if (ia > pa) { tex.repeat.set(pa / ia, 1); tex.offset.set((1 - pa / ia) / 2, 0); }
+    else { tex.repeat.set(1, ia / pa); tex.offset.set(0, (1 - ia / pa) / 2); }
     mat.map = tex;
     mat.needsUpdate = true;
   }, undefined, () => {
@@ -336,7 +412,7 @@ function pick(clientX, clientY) {
   pointer.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
   const hit = raycaster.intersectObject(state.hitMesh, false)[0];
-  return hit ? hit.faceIndex : -1;
+  return hit ? state.hitMesh.userData.triCell[hit.faceIndex] : -1;
 }
 
 function setHover(faceId, x, y) {
@@ -347,11 +423,8 @@ function setHover(faceId, x, y) {
     canvas.classList.remove('pointer');
     return;
   }
-  const tri = insetTriangle(state.faces[faceId], 0.96, 1.003);
-  const attr = state.hoverMesh.geometry.attributes.position;
-  tri.forEach((p, i) => attr.setXYZ(i, p.x, p.y, p.z));
-  attr.needsUpdate = true;
-  state.hoverMesh.geometry.computeBoundingSphere();
+  state.hoverMesh.geometry.dispose();
+  state.hoverMesh.geometry = cellPatch(state.faces[faceId], { gap: 0.02, r: NET_R * 1.002, segs: 4 });
   state.hoverMesh.visible = true;
 
   const dayIndex = state.faceToEntry.get(faceId);

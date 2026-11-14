@@ -1,7 +1,7 @@
 # Design Orbit
 
 One piece of design inspiration a day, stitched into a net of satellites around the globe.
-Each triangle in the net is a panel. Every new entry lights up the next one, so the archive spreads across the sphere over time.
+The net is made of bands of rectangular windows, like a geodesic dome of screens. Each window is a panel. Every new entry lights up the next one, so the archive spreads across the sphere over time.
 
 ## Add today's inspiration
 
@@ -22,7 +22,7 @@ Each triangle in the net is a panel. Every new entry lights up the next one, so 
 3. Commit and push. The panel lights up on the next page load.
 
 Entries are sorted by `date`, so the order in the file doesn't matter. `note`, `link` and `tags` are optional.
-The net starts with 320 panels and automatically subdivides into a denser net when you outgrow it.
+The net starts with ~300 panels (10° bands) and automatically adds bands when you outgrow it (378, then 458, …). Images are cropped to fill their window, centred, and always stay upright.
 
 The three `sample` entries are placeholders. Delete them (and their SVGs in `entries/`) once you've added your own.
 
