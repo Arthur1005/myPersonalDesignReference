@@ -13,6 +13,8 @@ export const UPLOAD_DIR = 'entries/similar';
 const LS_DRAFTS = 'designOrbit.drafts.v2';
 const LS_DRAFTS_V1 = 'designOrbit.drafts';
 const LS_TOKEN = 'designOrbit.githubToken';
+const LS_ADDED = 'designOrbit.added.v1';
+export const ENTRY_DIR = 'entries';
 
 /* ---------- localStorage (can throw in private modes) ---------- */
 export const ls = {
@@ -33,6 +35,10 @@ export const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&am
 /* ---------- drafts: { entryKey: { field: value } } ---------- */
 let drafts = {};
 try { drafts = JSON.parse(ls.get(LS_DRAFTS, '{}')) || {}; } catch { drafts = {}; }
+// brand-new panels not yet saved to the repo
+let added = [];
+try { added = JSON.parse(ls.get(LS_ADDED, '[]')) || []; } catch { added = []; }
+const saveAdded = () => { if (added.length) ls.set(LS_ADDED, JSON.stringify(added)); else ls.del(LS_ADDED); };
 // migrate keyword-only drafts from the first version
 try {
   const v1 = JSON.parse(ls.get(LS_DRAFTS_V1, 'null'));
@@ -117,10 +123,10 @@ async function prepareImage(file) {
 }
 
 /** Stage an image from the device; returns the repo path it will be saved to. */
-export async function stageUpload(file, entry) {
+export async function stageUpload(file, entry, dir = UPLOAD_DIR) {
   const { blob, ext } = await prepareImage(file);
   const rand = Math.random().toString(36).slice(2, 7);
-  const path = `${UPLOAD_DIR}/${entry.date}-${slug(file.name)}-${rand}.${ext}`;
+  const path = `${dir}/${entry.date}-${slug(file.name)}-${rand}.${ext}`;
   const url = URL.createObjectURL(blob);
   pending.set(path, { blob, url });
   previews.set(path, url);
@@ -158,6 +164,23 @@ async function restorePending() {
   } catch { /* no IndexedDB: uploads only live until reload */ }
 }
 
+/* ---------- new panels ---------- */
+/** Create a new entry from an image on the device. Returns its index on the globe. */
+export async function createEntry({ file, title, date, note }) {
+  let t = title.trim();
+  const taken = (x) => entries.some((e) => entryKey(e) === `${date}|${x}`);
+  for (let n = 2; taken(t); n++) t = `${title.trim()} (${n})`;
+  const image = await stageUpload(file, { date }, ENTRY_DIR);
+  const entry = { date, title: t, image };
+  if (note && note.trim()) entry.note = note.trim();
+  added.push({ ...entry });
+  saveAdded();
+  const index = window.orbit.addEntry(entry);
+  updateSavebar();
+  emit();
+  return index;
+}
+
 /* ---------- ready: apply drafts before anyone renders ---------- */
 let entries = [];
 let ready = false;
@@ -167,8 +190,18 @@ export function getEntries() { return entries; }
 
 async function boot() {
   if (editMode) await restorePending();
+  window.orbit.resolveImage = srcFor;   // show local previews for images not uploaded yet
   entries = window.orbit.state.entries;
-  if (editMode) for (const e of entries) { const p = drafts[entryKey(e)]; if (p) applyPatch(e, p); }
+  if (editMode) {
+    // put back panels added in this browser but not saved yet
+    const keys = new Set(entries.map(entryKey));
+    added = added.filter((a) => !keys.has(entryKey(a)));   // already in the repo? then it's saved
+    saveAdded();
+    for (const a of added) window.orbit.addEntry({ ...a });
+    for (const e of entries) { const p = drafts[entryKey(e)]; if (p) applyPatch(e, p); }
+  } else {
+    added = [];
+  }
   ready = true;
   updateSavebar();
   readyQueue.splice(0).forEach((fn) => fn(entries));
@@ -179,11 +212,14 @@ const savebar = document.getElementById('savebar');
 const statusEl = document.getElementById('save-status');
 
 function updateSavebar(message) {
-  const n = Object.keys(drafts).length;
+  const addedKeys = new Set(added.map(entryKey));
+  const n = Object.keys(drafts).filter((k) => !addedKeys.has(k)).length;
+  const a = added.length;
   const u = pending.size;
-  savebar.hidden = !editMode || (n === 0 && u === 0 && !message);
+  savebar.hidden = !editMode || (n === 0 && u === 0 && a === 0 && !message);
   if (message) { statusEl.textContent = message; return; }
   const parts = [];
+  if (a) parts.push(`${a} new panel${a === 1 ? '' : 's'}`);
   if (n) parts.push(`${n} panel${n === 1 ? '' : 's'} changed`);
   if (u) parts.push(`${u} image${u === 1 ? '' : 's'} to upload`);
   statusEl.textContent = `Unsaved: ${parts.join(', ')}`;
@@ -281,17 +317,27 @@ saveBtn.addEventListener('click', async () => {
     }
     // 2. entries.json: merge drafts into the latest file so nothing added elsewhere is lost
     const n = Object.keys(drafts).length;
-    if (n) {
+    if (n || added.length) {
       updateSavebar('Saving panels…');
       const file = await gh(`${api}/${ENTRIES_PATH}?ref=${branch}`, {}, headers);
       const remote = JSON.parse(b64decode(file.content));
       const list = remote.entries || remote;
+      const have = new Set(list.map(entryKey));
+      for (const a of added) {
+        if (have.has(entryKey(a))) continue;
+        // take the live copy, which already carries any keywords/links/comments added since
+        list.push({ ...(entries.find((e) => entryKey(e) === entryKey(a)) || a) });
+      }
       for (const e of list) { const p = drafts[entryKey(e)]; if (p) applyPatch(e, p); }
+      const addedN = added.length;
+      const changedN = Object.keys(drafts).filter((k) => !added.some((a) => entryKey(a) === k)).length;
+      const msg = [addedN && `Add ${addedN} panel${addedN === 1 ? '' : 's'}`, changedN && `update ${changedN}`]
+        .filter(Boolean).join(', ');
       await gh(`${api}/${ENTRIES_PATH}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `Update ${n} panel${n === 1 ? '' : 's'}`,
+          message: msg.charAt(0).toUpperCase() + msg.slice(1),
           content: bytesToB64(new TextEncoder().encode(exportJSON(list))),
           sha: file.sha,
           branch,
@@ -299,6 +345,8 @@ saveBtn.addEventListener('click', async () => {
       }, headers);
       drafts = {};
       ls.del(LS_DRAFTS);
+      added = [];
+      saveAdded();
     }
     emit();
     updateSavebar('Saved — live on the site in about a minute');

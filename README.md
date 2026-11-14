@@ -5,8 +5,13 @@ The net is made of bands of rectangular windows, like a geodesic dome of screens
 
 ## Add today's inspiration
 
-1. Put the image in `entries/` (e.g. `entries/2026-11-15-swiss-poster.jpg`). JPG, PNG, WebP or SVG all work; around 1200px wide is plenty.
-2. Add an entry to `data/entries.json`:
+**From the site (owner):** unlock with your PIN (“I’m Arthur”), then press **+ Add** (top right).
+Choose, drop or paste an image, give it a title (the date defaults to today) and optionally a note, and press
+**Light up a panel**. The panel appears on the globe straight away and opens so you can add keywords, links, similar
+projects and comments. Press **Save to GitHub** when you're done: the image goes into `entries/` and the entry into
+`data/entries.json`. The live site updates about a minute later (until then, a reload may not show it yet).
+
+**By hand:** put the image in `entries/` and add an entry to `data/entries.json`:
 
    ```json
    {
@@ -18,8 +23,6 @@ The net is made of bands of rectangular windows, like a geodesic dome of screens
      "keywords": ["poster", "swiss style", "typography"]
    }
    ```
-
-3. Commit and push. The panel lights up on the next page load.
 
 Entries are sorted by `date`, so the order in the file doesn't matter. Everything after `image` is optional, and
 `similar` / `comments` are easiest to add from the site itself.
@@ -105,6 +108,7 @@ gate.js             PIN / guest entry screen
 store.js            drafts, image uploads, Save to GitHub / Download
 keywords.js         floating keyword chips, search, spelling suggestions
 details.js          links, similar projects, comments
+add.js              “+ Add” dialog for new panels
 calendar.js         progress calendar and streaks
 data/entries.json   your archive
 data/keywords.json  vocabulary for keyword suggestions

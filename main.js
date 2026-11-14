@@ -45,6 +45,12 @@ controls.autoRotateSpeed = 0.35;
 
 const world = new THREE.Group();
 scene.add(world);
+const netGroup = new THREE.Group();     // net lines, satellites, picking shell (rebuilt if the net grows)
+const panelGroup = new THREE.Group();   // lit panels + their frames (rebuilt when entries change)
+world.add(netGroup, panelGroup);
+
+// Image paths can point at files not uploaded yet; the editing store swaps in a local preview.
+const resolveImage = (p) => (window.orbit?.resolveImage ? window.orbit.resolveImage(p) : p);
 
 /* ------------------------------------------------------------------ *
  *  Background stars
@@ -332,7 +338,7 @@ function buildNet(entryCount) {
   }
   const lineGeo = new THREE.BufferGeometry();
   lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
-  world.add(new THREE.LineSegments(lineGeo, fadeBackside(new THREE.LineBasicMaterial({
+  netGroup.add(new THREE.LineSegments(lineGeo, fadeBackside(new THREE.LineBasicMaterial({
     color: NET, transparent: true, opacity: 0.45, depthWrite: false,
   }))));
 
@@ -375,7 +381,7 @@ function buildNet(entryCount) {
         gl_FragColor = vec4(col, a * (0.55 + 0.45 * vA) * mix(uBackFade, 1.0, vFacing));
       }`,
   });
-  world.add(new THREE.Points(nodeGeo, nodeMat));
+  netGroup.add(new THREE.Points(nodeGeo, nodeMat));
   state.nodeMat = nodeMat;
 
   // One combined shell for picking (+ a faint shield tint); triangle -> cell lookup
@@ -396,20 +402,20 @@ function buildNet(entryCount) {
     color: 0x8a8a85, transparent: true, opacity: 0.035, side: THREE.DoubleSide, depthWrite: false,
   })));
   hitMesh.userData.triCell = triCell;
-  world.add(hitMesh);
+  netGroup.add(hitMesh);
   state.hitMesh = hitMesh;
 
   const hoverMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
     color: ACCENT, transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false,
   }));
   hoverMesh.visible = false;
-  world.add(hoverMesh);
+  netGroup.add(hoverMesh);
   state.hoverMesh = hoverMesh;
 }
 
 const loader = new THREE.TextureLoader();
 
-function addPanel(entry, dayIndex) {
+function addPanel(entry, dayIndex, { stagger = true } = {}) {
   const cellId = state.faceOrder[dayIndex];
   const cell = state.faces[cellId];
   state.faceToEntry.set(cellId, dayIndex);
@@ -418,18 +424,18 @@ function addPanel(entry, dayIndex) {
     color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
   }));
   const mesh = new THREE.Mesh(cellPatch(cell, { gap: PANEL_GAP, r: NET_R * 1.003 }), mat);
-  mesh.userData = { dayIndex, cellId, born: performance.now() + dayIndex * 40 };
-  world.add(mesh);
+  mesh.userData = { dayIndex, cellId, born: performance.now() + (stagger ? dayIndex * 40 : 0) };
+  panelGroup.add(mesh);
   state.panelMeshes.push(mesh);
 
   const frame = new THREE.LineLoop(
     new THREE.BufferGeometry().setFromPoints(cellOutline(cell, PANEL_GAP * 0.6, NET_R * 1.004)),
     fadeBackside(new THREE.LineBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.9 }))
   );
-  world.add(frame);
+  panelGroup.add(frame);
   mesh.userData.frame = frame;
 
-  loader.load(entry.image, (tex) => {
+  loader.load(resolveImage(entry.image), (tex) => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     // "cover" fit: crop the image to the panel's proportions, centred
@@ -442,6 +448,45 @@ function addPanel(entry, dayIndex) {
   }, undefined, () => {
     mat.color.set(ACCENT); // no image: show a solid lit cell
   });
+}
+
+/* ------------------------------------------------------------------ *
+ *  Adding panels after load
+ * ------------------------------------------------------------------ */
+const byDate = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+
+function disposeGroup(group) {
+  for (const o of [...group.children]) {
+    group.remove(o);
+    o.geometry?.dispose();
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) { m?.map?.dispose(); m?.dispose(); }
+  }
+}
+
+/** Re-sort entries and redraw every panel (and grow the net if it's full). */
+function rebuildPanels({ fresh = null } = {}) {
+  state.entries.sort(byDate);                 // in place: other modules hold this same array
+  if (state.entries.length > state.faces.length) {
+    disposeGroup(netGroup);
+    state.faces = [];
+    buildNet(state.entries.length);
+  }
+  disposeGroup(panelGroup);
+  state.panelMeshes = [];
+  state.faceToEntry.clear();
+  state.entries.forEach((e, i) => addPanel(e, i, { stagger: false }));
+  // only the new panel fades in; the rest appear at once
+  for (const m of state.panelMeshes) if (state.entries[m.userData.dayIndex] !== fresh) m.material.opacity = 0.95;
+  document.getElementById('filled').textContent = state.entries.length;
+  window.dispatchEvent(new CustomEvent('orbit:entries'));
+}
+
+/** Add a new entry to the globe; returns its index. */
+function addEntry(entry) {
+  state.entries.push(entry);
+  rebuildPanels({ fresh: entry });
+  return state.entries.indexOf(entry);
 }
 
 /* ------------------------------------------------------------------ *
@@ -554,7 +599,7 @@ function openEntry(dayIndex, { fly = true } = {}) {
   const e = state.entries[dayIndex];
   if (!e) return;
   state.current = dayIndex;
-  el('p-image').src = e.image;
+  el('p-image').src = resolveImage(e.image);
   el('p-image').alt = e.title;
   el('p-day').textContent = `Day ${String(dayIndex + 1).padStart(3, '0')} · ${formatDate(e.date)}`;
   el('p-title').textContent = e.title;
@@ -706,6 +751,8 @@ async function boot() {
     openEntry,
     // light up a set of panels (by entry index); [] clears
     highlightEntries(indices) { state.highlight = new Set(indices); },
+    addEntry,
+    refreshPanels: () => rebuildPanels(),
     // turn the globe to face a panel without opening it
     focusEntry(i) {
       if (!state.entries[i]) return;

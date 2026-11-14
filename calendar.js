@@ -109,7 +109,7 @@ function renderDay() {
   if (idx.length) {
     body = `<ul class="cal-entries">${idx.map((i) => `
       <li><button type="button" data-entry="${i}">
-        <img src="${esc(entries[i].image)}" alt="" loading="lazy" />
+        <img src="${esc((window.orbit.resolveImage || ((x) => x))(entries[i].image))}" alt="" loading="lazy" />
         <span><b>${esc(entries[i].title)}</b><small>Panel ${String(i + 1).padStart(3, '0')}</small></span>
       </button></li>`).join('')}</ul>`;
   } else if (st === 'today') {
@@ -168,6 +168,7 @@ $('cal-close').addEventListener('click', close);
 window.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || cal.hidden) return;
   if (document.body.classList.contains('panel-open')) return; // Esc closes the card first
+  if (document.body.classList.contains('adding')) return;      // ...or the Add dialog
   if (e.target.closest?.('input, textarea')) return;
   close();
 }, { capture: true }); // runs before the globe's handler closes the card, so one Esc = one layer
@@ -177,7 +178,7 @@ window.addEventListener('orbit:close', () => {
 });
 
 /* ---------- boot ---------- */
-function onReady() {
+function index() {
   entries = window.orbit.state.entries;
   byDate = new Map();
   entries.forEach((e, i) => {
@@ -186,9 +187,20 @@ function onReady() {
     byDate.get(e.date).push(i);
   });
   firstDate = [...byDate.keys()].sort()[0] || null;
+}
+
+function onReady() {
+  index();
   const now = new Date();
   view = { y: now.getFullYear(), m: now.getMonth() };
   render();
   if (new URLSearchParams(location.search).has('calendar')) open();
 }
 if (window.orbit?.ready) onReady(); else window.addEventListener('orbit:ready', onReady, { once: true });
+// a panel was added: recount days and redraw
+window.addEventListener('orbit:entries', () => {
+  index();
+  if (!view) return;
+  render();
+  if (!cal.hidden && selected) window.orbit.highlightEntries(byDate.get(selected) || []);
+});

@@ -56,9 +56,44 @@
 
   <div id="tooltip" class="tooltip" hidden></div>
 
-  <button id="cal-toggle" class="cal-toggle" type="button" aria-expanded="false" aria-controls="calendar">
-    <span class="cal-flame" id="cal-streak">0</span> day streak · Calendar
-  </button>
+  <div class="topbar">
+    <button id="add-open" class="add-open" type="button" hidden>+ Add</button>
+    <button id="cal-toggle" class="cal-toggle" type="button" aria-expanded="false" aria-controls="calendar">
+      <span class="cal-flame" id="cal-streak">0</span> day streak · Calendar
+    </button>
+  </div>
+
+  <div class="add-scrim" id="add-scrim" hidden></div>
+  <form class="add-dialog" id="add-dialog" role="dialog" aria-modal="true" aria-labelledby="add-title" novalidate hidden>
+    <button type="button" class="close" id="add-close" aria-label="Close">×</button>
+    <h2 id="add-title">Add today’s inspiration</h2>
+    <label class="add-drop" id="add-drop">
+      <input type="file" id="add-file" accept="image/*" />
+      <img id="add-preview" alt="" hidden />
+      <span class="add-drop-text" id="add-drop-text"><b>Choose an image</b><small>or drop it here · JPG, PNG, WebP, SVG, GIF</small></span>
+    </label>
+    <p class="form-error" id="add-err-file" hidden></p>
+    <div class="add-row">
+      <label class="add-field add-grow">
+        <span>Title</span>
+        <input id="add-name" type="text" maxlength="80" placeholder="What is it?" autocomplete="off" />
+      </label>
+      <label class="add-field">
+        <span>Date</span>
+        <input id="add-date" type="date" />
+      </label>
+    </div>
+    <p class="form-error" id="add-err-name" hidden></p>
+    <label class="add-field">
+      <span>Why it inspired you <em>(optional)</em></span>
+      <textarea id="add-note" rows="3" maxlength="1000" placeholder="What caught your eye?"></textarea>
+    </label>
+    <p class="add-hint">You can add keywords, links, similar projects and comments once it’s on the globe.</p>
+    <div class="add-actions">
+      <button type="button" class="ghost" id="add-cancel">Cancel</button>
+      <button type="submit" class="primary" id="add-submit">Light up a panel</button>
+    </div>
+  </form>
 
   <section id="calendar" class="calendar" aria-label="Progress calendar" hidden>
     <header class="cal-head">
@@ -161,6 +196,7 @@
   <script type="module" src="main.js"></script>
   <script type="module" src="keywords.js"></script>
   <script type="module" src="details.js"></script>
+  <script type="module" src="add.js"></script>
   <script type="module" src="calendar.js"></script>
 </body>
 </html>
