@@ -82,7 +82,7 @@ function renderSimilar() {
   const items = e.similar || [];
   $('similar').innerHTML = items.map((s, i) => `
     <li>
-      <a href="${esc(srcFor(s.image))}" target="_blank" rel="noopener" title="${esc(s.caption || 'Open image')}">
+      <a href="${esc(srcFor(s.image))}" data-view="${i}" target="_blank" rel="noopener" title="${esc(s.caption || 'Enlarge')}">
         <img src="${esc(srcFor(s.image))}" alt="${esc(s.caption || 'Similar project')}" loading="lazy" />
       </a>
       ${editMode && isPending(s.image) ? '<span class="badge">not uploaded</span>' : ''}

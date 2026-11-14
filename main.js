@@ -202,6 +202,7 @@ const state = {
   faces: [],          // cells: { lat0, lat1, lon0, lon1, centroid, aspect }
   faceOrder: [],      // faceOrder[dayIndex] = cellId
   faceToEntry: new Map(),
+  palettes: new Map(),  // entry -> 3 main colours as [L, a, b] (for "related" suggestions)
   panelMeshes: [],
   hitMesh: null,
   hoverMesh: null,
@@ -415,6 +416,41 @@ function buildNet(entryCount) {
 
 const loader = new THREE.TextureLoader();
 
+/* ---------- main colours of an image (tiny k-means in Lab space) ---------- */
+function toLab([r, g, b]) {
+  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const R = lin(r), G = lin(g), B = lin(b);
+  const x = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047;
+  const y = R * 0.2126 + G * 0.7152 + B * 0.0722;
+  const z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+  const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+}
+function palette(img, k = 3) {
+  const N = 20;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, N, N);
+  const d = ctx.getImageData(0, 0, N, N).data;
+  const px = [];
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 128) px.push(toLab([d[i], d[i + 1], d[i + 2]]));
+  if (!px.length) return null;
+  let cent = Array.from({ length: k }, (_, i) => px[Math.floor(((i + 0.5) / k) * px.length)].slice());
+  let groups = [];
+  for (let it = 0; it < 8; it++) {
+    groups = cent.map(() => []);
+    for (const p of px) {
+      let best = 0, bd = Infinity;
+      cent.forEach((q, j) => { const dd = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2; if (dd < bd) { bd = dd; best = j; } });
+      groups[best].push(p);
+    }
+    cent = groups.map((g, j) => (g.length ? [0, 1, 2].map((n) => g.reduce((s, p) => s + p[n], 0) / g.length) : cent[j]));
+  }
+  // biggest colour first, with its share of the image
+  return cent.map((q, j) => ({ lab: q, share: groups[j].length / px.length })).sort((a, b) => b.share - a.share);
+}
+
 function addPanel(entry, dayIndex, { stagger = true } = {}) {
   const cellId = state.faceOrder[dayIndex];
   const cell = state.faces[cellId];
@@ -444,6 +480,10 @@ function addPanel(entry, dayIndex, { stagger = true } = {}) {
     if (ia > pa) { tex.repeat.set(pa / ia, 1); tex.offset.set((1 - pa / ia) / 2, 0); }
     else { tex.repeat.set(1, ia / pa); tex.offset.set(0, (1 - ia / pa) / 2); }
     mat.map = tex;
+    try {
+      const pal = palette(tex.image);
+      if (pal) { state.palettes.set(entry, pal); window.dispatchEvent(new CustomEvent('orbit:palette')); }
+    } catch { /* cross-origin or odd format */ }
     mat.needsUpdate = true;
   }, undefined, () => {
     mat.color.set(ACCENT); // no image: show a solid lit cell

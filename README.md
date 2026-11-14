@@ -42,6 +42,13 @@ The PIN is stored only as a slow PBKDF2 hash in `gate.js` (with instructions the
 site, the PIN locks the editing *interface*; what actually protects the repo is the GitHub token below, which only
 lives in your own browser. Without it, nobody can save anything.
 
+## In each panel
+
+- **Click the image to enlarge it.** Click again to zoom to full size and drag to look around; `←`/`→` step through the
+  panel's images (main + similar projects), `Esc` closes.
+- **Related on your globe** suggests up to four other panels, ranked by shared keywords (rarer ones count more), links
+  to the same website, and similar colours (read from each image). Each suggestion shows why; click to fly to it.
+
 ## Editing a panel (owner)
 
 Open any lit panel. Under the image:
@@ -107,6 +114,8 @@ gate.js             welcome panel + owner login (lock icon)
 store.js            drafts, image uploads, Save to GitHub / Download
 keywords.js         floating keyword chips, search, spelling suggestions
 details.js          links, similar projects, comments
+related.js          related-panel suggestions
+lightbox.js         full-screen image viewer
 add.js              “+ Add” dialog for new panels
 calendar.js         progress calendar and streaks
 data/entries.json   your archive
