@@ -386,6 +386,7 @@ function addPanel(entry, dayIndex) {
     new THREE.LineBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending })
   );
   world.add(frame);
+  mesh.userData.frame = frame;
 
   loader.load(entry.image, (tex) => {
     tex.colorSpace = THREE.SRGBColorSpace;
@@ -594,8 +595,15 @@ function tick() {
 
   for (const m of state.panelMeshes) {
     const age = Math.max(0, (now - m.userData.born) / 900);
-    const target = state.current < 0 || m.userData.focus ? 0.95 : 0.45;
+    const hl = state.highlight;
+    const lit = hl && hl.size && hl.has(m.userData.dayIndex);
+    let target;
+    if (state.current >= 0) target = m.userData.focus ? 0.95 : 0.45;
+    else if (hl && hl.size) target = lit ? 1 : 0.22;
+    else target = 0.95;
     m.material.opacity += (Math.min(age, 1) * target - m.material.opacity) * 0.12;
+    const f = m.userData.frame;
+    if (f) f.material.opacity = lit ? 0.55 + 0.45 * Math.sin(t * 5) : hl && hl.size ? 0.3 : 0.9;
   }
 
   stepFlight(now);
@@ -628,7 +636,19 @@ async function boot() {
 
   buildNet(entries.length);
   entries.forEach(addPanel);
-  window.orbit = { state, ready: true };
+  window.orbit = {
+    state,
+    ready: true,
+    openEntry,
+    // light up a set of panels (by entry index); [] clears
+    highlightEntries(indices) { state.highlight = new Set(indices); },
+    // turn the globe to face a panel without opening it
+    focusEntry(i) {
+      if (!state.entries[i]) return;
+      controls.autoRotate = false;
+      flyTo(state.faces[state.faceOrder[i]].centroid, CAMERA_DIST * 0.82);
+    },
+  };
   window.dispatchEvent(new CustomEvent('orbit:ready'));
 
   // Start facing the newest panel

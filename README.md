@@ -46,6 +46,19 @@ In edit mode:
 
 To grow the suggestion list, add words to `data/keywords.json`.
 
+## Progress calendar
+
+The **Calendar** button (top right) shows your current streak and opens a month view:
+
+- **Done**: at least one entry that day
+- **2+ entries**: brighter, with a count badge
+- **Missed**: a past day with no entry (counted from your first-ever entry)
+- **Today**: outlined until you add something; it never counts as missed while the day is still going
+
+Hover a day to light up its panels on the globe; click it to turn the globe to them and list that day's entries
+(click one to open it). Stats show current streak, best streak, days done / days tracked, and total entries.
+Dates come from each entry's `date` field, so add entries with the day you actually found them. Link straight to it with `?calendar`.
+
 ## Run locally
 
 Any static server works:
@@ -67,7 +80,7 @@ The site will appear at `https://<username>.github.io/myPersonalDesignReference/
 - Drag to orbit, scroll to zoom
 - Hover a panel to see its title, click to open it
 - `←` / `→` step between days, `Esc` closes
-- Link straight to a day with `#day-12`
+- Link straight to a panel with `#day-12`
 
 ## Structure
 
@@ -76,6 +89,7 @@ index.html          page shell
 style.css           styles
 main.js             the globe (Three.js)
 keywords.js         keyword chips, search, spelling suggestions, saving
+calendar.js         progress calendar and streaks
 data/entries.json   your archive
 data/keywords.json  vocabulary for keyword suggestions
 entries/            images

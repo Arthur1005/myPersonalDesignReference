@@ -27,6 +27,33 @@
 
   <div id="tooltip" class="tooltip" hidden></div>
 
+  <button id="cal-toggle" class="cal-toggle" type="button" aria-expanded="false" aria-controls="calendar">
+    <span class="cal-flame" id="cal-streak">0</span> day streak · Calendar
+  </button>
+
+  <section id="calendar" class="calendar" aria-label="Progress calendar" hidden>
+    <header class="cal-head">
+      <button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button>
+      <h2 id="cal-title"></h2>
+      <button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button>
+      <button type="button" class="cal-close" id="cal-close" aria-label="Close calendar">×</button>
+    </header>
+    <dl class="cal-stats">
+      <div><dt>Current streak</dt><dd id="st-streak">0</dd></div>
+      <div><dt>Best streak</dt><dd id="st-best">0</dd></div>
+      <div><dt>Days done</dt><dd id="st-done">0</dd></div>
+      <div><dt>Entries</dt><dd id="st-total">0</dd></div>
+    </dl>
+    <div class="cal-grid" id="cal-grid" role="grid"></div>
+    <ul class="cal-legend">
+      <li><i class="lg done"></i>Done</li>
+      <li><i class="lg multi"></i>2+ entries</li>
+      <li><i class="lg missed"></i>Missed</li>
+      <li><i class="lg today"></i>Today</li>
+    </ul>
+    <div class="cal-day" id="cal-day"></div>
+  </section>
+
   <div id="scrim" class="scrim"></div>
   <aside id="panel" class="panel" role="dialog" aria-modal="true" aria-labelledby="p-title" aria-hidden="true">
     <button class="close" id="close" aria-label="Close">×</button>
@@ -65,5 +92,6 @@
 
   <script type="module" src="main.js"></script>
   <script type="module" src="keywords.js"></script>
+  <script type="module" src="calendar.js"></script>
 </body>
 </html>
