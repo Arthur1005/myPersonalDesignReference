@@ -21,22 +21,31 @@
 
   <div id="gate" class="gate" hidden>
     <div class="gate-card" role="dialog" aria-modal="true" aria-labelledby="gate-title">
-      <p class="gate-kicker">Design Orbit</p>
-      <h2 id="gate-title">Enter your PIN</h2>
-      <p class="gate-sub">Owners can add and edit. Guests can look around.</p>
-      <div class="pin" role="group" aria-label="6-digit PIN">
-        <input inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Digit 1" />
-        <input inputmode="numeric" maxlength="6" aria-label="Digit 2" />
-        <input inputmode="numeric" maxlength="6" aria-label="Digit 3" />
-        <input inputmode="numeric" maxlength="6" aria-label="Digit 4" />
-        <input inputmode="numeric" maxlength="6" aria-label="Digit 5" />
-        <input inputmode="numeric" maxlength="6" aria-label="Digit 6" />
+      <div class="gate-step" id="gate-step-guest">
+        <p class="gate-kicker">Design Orbit</p>
+        <h2 id="gate-title">A daily design reference</h2>
+        <p class="gate-sub">One piece of inspiration a day, stitched into a net around the globe.</p>
+        <button type="button" class="gate-guest" id="gate-guest">Enter as guest</button>
+        <button type="button" class="gate-owner-link" id="gate-owner">I’m Arthur</button>
       </div>
-      <p class="gate-error" id="gate-error" role="alert" hidden></p>
-      <label class="gate-remember"><input type="checkbox" id="gate-remember" /> Remember on this device</label>
-      <div class="gate-or"><span>or</span></div>
-      <button type="button" class="gate-guest" id="gate-guest">Continue as guest</button>
+
+      <div class="gate-step" id="gate-step-pin" hidden>
+        <button type="button" class="gate-back" id="gate-back">← Back</button>
+        <h2>Hi Arthur</h2>
+        <p class="gate-sub">Enter your PIN to edit.</p>
+        <div class="pin" role="group" aria-label="6-digit PIN">
+          <input inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Digit 1" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 2" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 3" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 4" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 5" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 6" />
+        </div>
+        <p class="gate-error" id="gate-error" role="alert" hidden></p>
+        <label class="gate-remember"><input type="checkbox" id="gate-remember" /> Remember on this device</label>
+      </div>
     </div>
+  </div>
   </div>
 
   <header class="masthead">

@@ -51,9 +51,24 @@ function showGate() {
     let lockedUntil = 0;
     let busy = false;
 
+    const stepGuest = document.getElementById('gate-step-guest');
+    const stepPin = document.getElementById('gate-step-pin');
+    const showStep = (pin) => {
+      stepGuest.hidden = pin;
+      stepPin.hidden = !pin;
+      (pin ? stepPin : stepGuest).classList.add('enter');
+      requestAnimationFrame(() => (pin ? boxes[0] : document.getElementById('gate-guest')).focus());
+    };
+
     gate.hidden = false;
     document.body.classList.add('gated');
-    requestAnimationFrame(() => boxes[0].focus());
+    showStep(false);
+    document.getElementById('gate-owner').addEventListener('click', () => showStep(true));
+    document.getElementById('gate-back').addEventListener('click', () => {
+      err.hidden = true;
+      boxes.forEach((b) => { b.value = ''; });
+      showStep(false);
+    });
 
     const finish = (mode) => {
       set(sessionStorage, KEY, mode);
@@ -108,6 +123,7 @@ function showGate() {
         else if (e.key === 'ArrowLeft' && i > 0) boxes[i - 1].focus();
         else if (e.key === 'ArrowRight' && i < PIN_LEN - 1) boxes[i + 1].focus();
         else if (e.key === 'Enter') tryUnlock();
+        else if (e.key === 'Escape') document.getElementById('gate-back').click();
       });
       box.addEventListener('focus', () => box.select());
     });

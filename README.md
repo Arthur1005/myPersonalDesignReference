@@ -29,7 +29,7 @@ The three `sample` entries are placeholders. Delete them (and their SVGs in `ent
 
 ## Owner PIN and guests
 
-Visitors are asked for a 6-digit PIN or can **Continue as guest**:
+Visitors land on **Enter as guest**. A small **I’m Arthur** link underneath leads to the 6-digit PIN:
 
 - **Owner (PIN)**: can add and edit keywords, links, similar projects and comments. Tick *Remember on this device* to skip the PIN next time.
 - **Guest**: view only — no editing controls are shown.
