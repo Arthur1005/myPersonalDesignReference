@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ *
  *  Card details: links, similar projects (images from your device),
- *  and comments. Visible to everyone; editable in edit mode (?edit).
+ *  and comments. Visible to everyone; editable by the owner (PIN).
  * ------------------------------------------------------------------ */
 import { editMode, patch, whenReady, esc, srcFor, isPending, stageUpload, unstageUpload } from './store.js';
 
