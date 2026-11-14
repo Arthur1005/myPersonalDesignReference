@@ -70,24 +70,24 @@ const err = document.getElementById('gate-error');
 const remember = document.getElementById('gate-remember');
 
 btn.classList.toggle('unlocked', access === 'owner');
-btn.title = access === 'owner' ? 'Editing unlocked' : 'Owner login';
-btn.setAttribute('aria-label', btn.title);
-document.getElementById('lock-login').hidden = access === 'owner';
-document.getElementById('lock-owner').hidden = access !== 'owner';
-document.getElementById('lock-out').addEventListener('click', lock);
+btn.title = access === 'owner' ? 'Editing unlocked · click to lock' : 'Owner login';
+btn.setAttribute('aria-label', access === 'owner' ? 'Lock editing' : 'Owner login');
 
 function openPop() {
   pop.hidden = false;
   btn.setAttribute('aria-expanded', 'true');
   err.hidden = true;
   boxes.forEach((b) => { b.value = ''; });
-  requestAnimationFrame(() => (access === 'owner' ? document.getElementById('lock-out') : boxes[0]).focus());
+  requestAnimationFrame(() => boxes[0].focus());
 }
 function closePop() {
   pop.hidden = true;
   btn.setAttribute('aria-expanded', 'false');
 }
-btn.addEventListener('click', () => (pop.hidden ? openPop() : closePop()));
+btn.addEventListener('click', () => {
+  if (access === 'owner') { lock(); return; }   // unlocked: one click locks straight away
+  if (pop.hidden) openPop(); else closePop();
+});
 document.addEventListener('pointerdown', (e) => {
   if (!pop.hidden && !e.target.closest('#owner')) closePop();
 });

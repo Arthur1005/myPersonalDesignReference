@@ -170,7 +170,7 @@
       </svg>
     </button>
     <div class="lock-pop" id="lock-pop" role="dialog" aria-label="Owner login" hidden>
-      <div id="lock-login">
+      <div>
         <p class="lock-title">Owner PIN</p>
         <div class="pin" role="group" aria-label="6-digit PIN">
           <input inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Digit 1" />
@@ -182,10 +182,6 @@
         </div>
         <p class="gate-error" id="gate-error" role="alert" hidden></p>
         <label class="gate-remember"><input type="checkbox" id="gate-remember" /> Remember on this device</label>
-      </div>
-      <div id="lock-owner" hidden>
-        <p class="lock-title">Editing is unlocked</p>
-        <button type="button" class="lock-out" id="lock-out">Lock</button>
       </div>
     </div>
   </div>
@@ -206,6 +202,7 @@
 
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" hidden>
     <div class="lb-stage" id="lb-stage"><img id="lb-img" alt="" /></div>
+    <div class="lb-loupe" id="lb-loupe" aria-hidden="true" hidden></div>
     <p class="lb-caption" id="lb-caption"></p>
     <button type="button" class="lb-btn lb-close" id="lb-close" aria-label="Close">×</button>
     <button type="button" class="lb-btn lb-prev" id="lb-prev" aria-label="Previous image">‹</button>

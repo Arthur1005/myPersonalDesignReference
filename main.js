@@ -40,8 +40,9 @@ controls.enablePan = false;
 controls.minDistance = 1.9;
 controls.maxDistance = 8;
 controls.rotateSpeed = 0.6;
-controls.autoRotate = true;
+controls.autoRotate = true;      // always spinning, except while dragging or with a panel open (see tick)
 controls.autoRotateSpeed = 0.35;
+let dragging = false;
 
 const world = new THREE.Group();
 scene.add(world);
@@ -617,7 +618,14 @@ function processHover() {
   setHover(pick(x, y), x, y);
 }
 canvas.addEventListener('pointerleave', () => { pendingHover = null; setHover(-1); });
-canvas.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY }; controls.autoRotate = false; });
+canvas.addEventListener('pointerdown', (e) => {
+  downAt = { x: e.clientX, y: e.clientY };
+  dragging = true;
+  controls._sphericalDelta?.set(0, 0, 0);   // drop the spin's leftover momentum: the globe stops the instant you grab it
+});
+window.addEventListener('pointerup', () => { dragging = false; });
+window.addEventListener('pointercancel', () => { dragging = false; });
+window.addEventListener('blur', () => { dragging = false; });
 canvas.addEventListener('pointerup', (e) => {
   if (!downAt) return;
   const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
@@ -650,7 +658,6 @@ function openEntry(dayIndex, { fly = true } = {}) {
   panel.classList.add('open');
   panel.setAttribute('aria-hidden', 'false');
   document.body.classList.add('panel-open');
-  controls.autoRotate = false;
   history.replaceState(null, '', `#day-${dayIndex + 1}`);
 
   state.panelMeshes.forEach((m) => { m.userData.focus = m.userData.dayIndex === dayIndex; });
@@ -733,8 +740,11 @@ function adaptResolution(now) {
   }
 }
 
+let prevTick = performance.now();
 function tick() {
   const now = performance.now();
+  const dt = Math.min(0.1, (now - prevTick) / 1000);   // seconds since last frame (capped after a tab switch)
+  prevTick = now;
   adaptResolution(now);
   processHover();
   const t = clock.getElapsedTime();
@@ -755,7 +765,9 @@ function tick() {
 
   uBackFade.value += (BACK_FADE[coreMode] - uBackFade.value) * 0.1;
   stepFlight(now);
-  if (!flight) controls.update();
+  controls.autoRotate = !dragging && state.current < 0;
+  // with a panel open the globe holds perfectly still (no leftover glide), so the panel stays centred
+  if (!flight && state.current < 0) controls.update(dt);   // dt keeps the spin the same speed on any screen
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
@@ -787,6 +799,8 @@ async function boot() {
   setCoreMode(coreMode);
   window.orbit = {
     state,
+    camera,
+    controls,
     ready: true,
     openEntry,
     // light up a set of panels (by entry index); [] clears
@@ -796,7 +810,6 @@ async function boot() {
     // turn the globe to face a panel without opening it
     focusEntry(i) {
       if (!state.entries[i]) return;
-      controls.autoRotate = false;
       flyTo(state.faces[state.faceOrder[i]].centroid, CAMERA_DIST * 0.82);
     },
   };

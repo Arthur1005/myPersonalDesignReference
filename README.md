@@ -36,7 +36,7 @@ Visitors see a short welcome panel (once per browser session) and then browse th
 
 To edit, click the **lock icon** in the bottom-left corner and type your 6-digit PIN. The page reloads with editing
 unlocked: the lock turns blue and **+ Add** appears. Tick *Remember on this device* to stay unlocked on that browser;
-click the lock again and choose **Lock** to go back to view-only.
+click the blue lock again to lock straight away.
 
 The PIN is stored only as a slow PBKDF2 hash in `gate.js` (with instructions there for changing it). Since this is a static
 site, the PIN locks the editing *interface*; what actually protects the repo is the GitHub token below, which only
@@ -44,8 +44,9 @@ lives in your own browser. Without it, nobody can save anything.
 
 ## In each panel
 
-- **Click the image to enlarge it.** Click again to zoom to full size and drag to look around; `←`/`→` step through the
-  panel's images (main + similar projects), `Esc` closes.
+- **Click the image to enlarge it.** In the viewer the cursor becomes a magnifying glass that enlarges just the spot
+  under it (scroll to make it stronger or weaker); `←`/`→` step through the panel's images (main + similar projects),
+  `Esc` closes.
 - **Related on your globe** suggests up to four other panels, ranked by shared keywords (rarer ones count more), links
   to the same website, and similar colours (read from each image). Each suggestion shows why; click to fly to it.
 

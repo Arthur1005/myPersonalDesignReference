@@ -1,6 +1,7 @@
 /* ------------------------------------------------------------------ *
  *  Enlarge images: click the card image or a similar-project image.
- *  Click the image to zoom to full size (drag or scroll to look around),
+ *  In the viewer the cursor becomes a magnifying glass that enlarges only
+ *  the spot under it (scroll to change how strong it is).
  *  ← → to step through this panel's images, Esc to close.
  * ------------------------------------------------------------------ */
 
@@ -12,7 +13,8 @@ const caption = $('lb-caption');
 
 let items = [];
 let index = 0;
-let zoomed = false;
+const loupe = $('lb-loupe');
+let power = 2.5;          // magnification (scroll wheel changes it)
 let lastFocus = null;
 
 const resolve = (p) => (window.orbit?.resolveImage ? window.orbit.resolveImage(p) : p);
@@ -31,23 +33,11 @@ function panelItems() {
 function show() {
   const it = items[index];
   if (!it) return;
-  setZoom(false);
+  loupe.hidden = true;
   img.src = it.src;
   img.alt = it.caption || '';
   caption.textContent = items.length > 1 ? `${it.caption || ''}  ·  ${index + 1} / ${items.length}` : (it.caption || '');
   $('lb-prev').hidden = $('lb-next').hidden = items.length < 2;
-}
-
-function setZoom(on, at) {
-  zoomed = on && (img.naturalWidth > stage.clientWidth || img.naturalHeight > stage.clientHeight);
-  box.classList.toggle('zoomed', zoomed);
-  if (zoomed && at) {
-    // keep the clicked spot under the cursor
-    requestAnimationFrame(() => {
-      stage.scrollLeft = at.fx * img.naturalWidth - at.x;
-      stage.scrollTop = at.fy * img.naturalHeight - at.y;
-    });
-  }
 }
 
 export function openLightbox(list, start = 0) {
@@ -63,6 +53,7 @@ function close() {
   box.hidden = true;
   document.body.classList.remove('lightbox-open');
   img.removeAttribute('src');
+  loupe.hidden = true;
   lastFocus?.focus?.();
 }
 const step = (d) => { index = (index + d + items.length) % items.length; show(); };
@@ -72,28 +63,29 @@ $('lb-prev').addEventListener('click', () => step(-1));
 $('lb-next').addEventListener('click', () => step(1));
 box.addEventListener('click', (e) => { if (e.target === box || e.target === stage) close(); });
 
-// click to zoom / unzoom; drag to pan when zoomed
-let drag = null;
-img.addEventListener('pointerdown', (e) => {
-  drag = { x: e.clientX, y: e.clientY, sl: stage.scrollLeft, st: stage.scrollTop, moved: false };
-  if (zoomed) img.setPointerCapture(e.pointerId);
-});
-img.addEventListener('pointermove', (e) => {
-  if (!drag || !zoomed) return;
-  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-  if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
-  stage.scrollLeft = drag.sl - dx;
-  stage.scrollTop = drag.st - dy;
-});
-img.addEventListener('pointerup', (e) => {
-  const d = drag;
-  drag = null;
-  if (d?.moved) return;
-  if (zoomed) { setZoom(false); return; }
+// magnifying glass: follows the pointer and enlarges only the spot under it
+const LENS = 220;   // lens diameter in px
+function moveLoupe(e) {
   const r = img.getBoundingClientRect();
-  const sr = stage.getBoundingClientRect();
-  setZoom(true, { fx: (e.clientX - r.left) / r.width, fy: (e.clientY - r.top) / r.height, x: e.clientX - sr.left, y: e.clientY - sr.top });
-});
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  if (x < 0 || y < 0 || x > r.width || y > r.height || !img.naturalWidth) { loupe.hidden = true; return; }
+  // never blurrier than the real pixels: go at least to the image's full resolution
+  const k = Math.max(power, Math.min(8, img.naturalWidth / r.width));
+  loupe.hidden = false;
+  loupe.style.transform = `translate(${e.clientX - LENS / 2}px, ${e.clientY - LENS / 2}px)`;
+  loupe.style.backgroundImage = `url("${img.src}")`;
+  loupe.style.backgroundSize = `${r.width * k}px ${r.height * k}px`;
+  loupe.style.backgroundPosition = `${LENS / 2 - x * k}px ${LENS / 2 - y * k}px`;
+}
+img.addEventListener('pointermove', moveLoupe);
+img.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') { img.setPointerCapture(e.pointerId); moveLoupe(e); } });
+img.addEventListener('pointerleave', () => { loupe.hidden = true; });
+img.addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') loupe.hidden = true; });
+img.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  power = Math.min(8, Math.max(1.5, power * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+  moveLoupe(e);
+}, { passive: false });
 
 // keys: handled first, so Esc closes only the viewer (not the card behind it)
 window.addEventListener('keydown', (e) => {
@@ -102,7 +94,6 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { e.preventDefault(); close(); }
   else if (e.key === 'ArrowLeft' && items.length > 1) step(-1);
   else if (e.key === 'ArrowRight' && items.length > 1) step(1);
-  else if (e.key === ' ' || e.key === 'z') { e.preventDefault(); setZoom(!zoomed); }
 }, { capture: true });
 
 /* ---------- hooks into the card ---------- */
