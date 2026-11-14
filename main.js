@@ -570,35 +570,54 @@ function pick(clientX, clientY) {
   return hit ? state.hitMesh.userData.triCell[hit.faceIndex] : -1;
 }
 
-function setHover(faceId, x, y) {
-  if (faceId === hoveredFace && faceId >= 0) {   // same cell: just move the tooltip
-    tooltip.style.left = `${x}px`;
-    tooltip.style.top = `${y}px`;
-    return;
-  }
-  hoveredFace = faceId;
-  if (faceId < 0) {
-    state.hoverMesh.visible = false;
-    tooltip.hidden = true;
-    canvas.classList.remove('pointer');
-    return;
-  }
-  state.hoverMesh.geometry.dispose();
-  state.hoverMesh.geometry = cellPatch(state.faces[faceId], { gap: 0.02, r: NET_R * 1.002, segs: 4 });
-  state.hoverMesh.visible = true;
+// Two ways to turn the globe with a mouse:
+//   normal – drag to turn
+//   follow – click once (not on a lit panel) and the globe turns with the cursor; click again to release
+let following = false;
+let lastMove = null;
+let hintKey = '';
 
-  const dayIndex = state.faceToEntry.get(faceId);
-  if (dayIndex !== undefined) {
-    const e = state.entries[dayIndex];
-    tooltip.innerHTML = `<span class="d">${String(dayIndex + 1).padStart(3, '0')}</span>${escapeHTML(e.title)}`;
-    canvas.classList.add('pointer');
-  } else {
-    tooltip.innerHTML = `<span class="d">—</span>Unlit panel`;
-    canvas.classList.remove('pointer');
+function setFollowing(on) {
+  following = on;
+  lastMove = null;
+  hintKey = '';
+  canvas.classList.toggle('following', on);
+  document.body.classList.toggle('following', on);
+  controls._sphericalDelta?.set(0, 0, 0);
+}
+
+function setHover(faceId, x, y, mouse = true) {
+  if (faceId !== hoveredFace) {
+    hoveredFace = faceId;
+    if (faceId < 0) state.hoverMesh.visible = false;
+    else {
+      state.hoverMesh.geometry.dispose();
+      state.hoverMesh.geometry = cellPatch(state.faces[faceId], { gap: 0.02, r: NET_R * 1.002, segs: 4 });
+      state.hoverMesh.visible = true;
+    }
+  }
+  if (x === undefined) { tooltip.hidden = true; canvas.classList.remove('pointer'); hintKey = ''; return; }
+
+  // the label that travels with the cursor: what's here + what a click does
+  const dayIndex = faceId >= 0 ? state.faceToEntry.get(faceId) : undefined;
+  const key = `${dayIndex ?? 'x'}|${following}|${mouse}`;
+  if (key !== hintKey) {
+    hintKey = key;
+    let html = '';
+    if (dayIndex !== undefined) {
+      const e = state.entries[dayIndex];
+      html = `<span class="d">${String(dayIndex + 1).padStart(3, '0')}</span>${escapeHTML(e.title)}<small>Click to open</small>`;
+    } else if (mouse) {
+      html = following
+        ? '<span class="dot"></span>Following your cursor<small>Click to release</small>'
+        : 'Drag to turn<small>Click once and the globe follows your cursor</small>';
+    }
+    tooltip.innerHTML = html;
+    tooltip.hidden = !html;
+    canvas.classList.toggle('pointer', dayIndex !== undefined);
   }
   tooltip.style.left = `${x}px`;
   tooltip.style.top = `${y}px`;
-  tooltip.hidden = false;
 }
 
 function escapeHTML(s = '') {
@@ -608,16 +627,24 @@ function escapeHTML(s = '') {
 // Hover picking runs at most once per frame, and never while dragging.
 let pendingHover = null;
 canvas.addEventListener('pointermove', (e) => {
-  if (e.buttons) { if (hoveredFace !== -1) setHover(-1); pendingHover = null; return; }
-  pendingHover = { x: e.clientX, y: e.clientY };
+  if (e.buttons) { setHover(-1); pendingHover = null; lastMove = null; return; }
+  if (following && e.pointerType === 'mouse') {
+    if (lastMove) {
+      const k = (2 * Math.PI * controls.rotateSpeed) / canvas.clientHeight;
+      controls._rotateLeft(k * (e.clientX - lastMove.x));
+      controls._rotateUp(k * (e.clientY - lastMove.y));
+    }
+    lastMove = { x: e.clientX, y: e.clientY };
+  }
+  pendingHover = { x: e.clientX, y: e.clientY, mouse: e.pointerType === 'mouse' };
 });
 function processHover() {
   if (!pendingHover) return;
-  const { x, y } = pendingHover;
+  const { x, y, mouse } = pendingHover;
   pendingHover = null;
-  setHover(pick(x, y), x, y);
+  setHover(pick(x, y), x, y, mouse);
 }
-canvas.addEventListener('pointerleave', () => { pendingHover = null; setHover(-1); });
+canvas.addEventListener('pointerleave', () => { pendingHover = null; lastMove = null; setHover(-1); });
 canvas.addEventListener('pointerdown', (e) => {
   downAt = { x: e.clientX, y: e.clientY };
   dragging = true;
@@ -633,8 +660,11 @@ canvas.addEventListener('pointerup', (e) => {
   if (moved > 5) return;
   const faceId = pick(e.clientX, e.clientY);
   const dayIndex = state.faceToEntry.get(faceId);
-  if (dayIndex !== undefined) openEntry(dayIndex);
-  else if (faceId < 0) closePanel();
+  if (dayIndex !== undefined) { setFollowing(false); openEntry(dayIndex); }
+  else if (e.pointerType === 'mouse') {
+    setFollowing(!following);
+    pendingHover = { x: e.clientX, y: e.clientY, mouse: true };   // refresh the hint straight away
+  }
 });
 
 /* ------------------------------------------------------------------ *
@@ -683,7 +713,7 @@ el('prev').addEventListener('click', () => openEntry(state.current - 1));
 el('next').addEventListener('click', () => openEntry(state.current + 1));
 window.addEventListener('keydown', (e) => {
   if (e.target.closest?.('input, textarea, [contenteditable]')) return;
-  if (e.key === 'Escape') closePanel();
+  if (e.key === 'Escape') { if (state.current < 0 && following) setFollowing(false); closePanel(); }
   if (state.current < 0) return;
   if (e.key === 'ArrowLeft' && state.current > 0) openEntry(state.current - 1);
   if (e.key === 'ArrowRight' && state.current < state.entries.length - 1) openEntry(state.current + 1);
@@ -765,7 +795,7 @@ function tick() {
 
   uBackFade.value += (BACK_FADE[coreMode] - uBackFade.value) * 0.1;
   stepFlight(now);
-  controls.autoRotate = !dragging && state.current < 0;
+  controls.autoRotate = !dragging && !following && state.current < 0;
   // with a panel open the globe holds perfectly still (no leftover glide), so the panel stays centred
   if (!flight && state.current < 0) controls.update(dt);   // dt keeps the spin the same speed on any screen
   renderer.render(scene, camera);

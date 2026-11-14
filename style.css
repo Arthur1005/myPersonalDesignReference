@@ -47,6 +47,7 @@ body { background: transparent; }
   display: block;
   cursor: grab;
 }
+#scene.following { cursor: all-scroll; }
 #scene.pointer { cursor: pointer; }
 #scene:active { cursor: grabbing; }
 
@@ -100,6 +101,10 @@ body.panel-open .hint { opacity: 0; }
   transform: translate(14px, 14px);
 }
 .tooltip .d { color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
+.tooltip small { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim); }
+.tooltip .dot { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--accent); animation: hint-pulse 1.2s ease-in-out infinite; }
+@keyframes hint-pulse { 50% { opacity: 0.3; } }
+body.following .tooltip { border-color: var(--accent); }
 
 /* Detail card: floats over the globe */
 .scrim {
@@ -701,10 +706,11 @@ body.gated .core-switch, body.panel-open .core-switch { visibility: hidden; }
   cursor: pointer;
 }
 .related button:hover { border-color: var(--accent); background: #fff; }
-.related img { width: 64px; height: 48px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: #ececea; }
-.rel-text { min-width: 0; display: grid; gap: 4px; }
-.rel-text b { font-family: var(--font-title); font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rel-why { display: flex; flex-wrap: wrap; gap: 4px; }
+.related img { display: block; width: 64px; height: 48px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: #ececea; }
+.rel-text { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+.rel-text b { display: block; line-height: 1.2; font-family: var(--font-title); font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rel-why { display: block; font-size: 0; line-height: 0; margin: -2px; }
+.rel-why .why { margin: 2px; line-height: 14px; vertical-align: top; }
 .why {
   display: inline-flex;
   align-items: center;
@@ -955,7 +961,7 @@ body.gated .topbar { visibility: hidden; }
 }
 .cal-entries button:hover { border-color: var(--accent); }
 .cal-entries img { width: 56px; height: 42px; object-fit: cover; border-radius: 4px; background: #ececea; flex-shrink: 0; }
-.cal-entries b { display: block; font-size: 13px; font-weight: 500; }
+.cal-entries b { display: block; line-height: 1.2; font-size: 13px; font-weight: 500; }
 .cal-entries small { font-size: 11px; color: var(--dim); }
 
 @media (max-width: 600px) {
