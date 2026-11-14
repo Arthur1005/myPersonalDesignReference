@@ -46,6 +46,12 @@
         "fading",
         "premium",
         "matte"
+      ],
+      "comments": [
+        {
+          "at": "2026-11-14T14:21:33.658Z",
+          "text": "Search bar placed at the bottom. Kinda cool when prioritising all the categories at the 'Navigation' area, and relocate the search bar to the bottom."
+        }
       ]
     }
   ]
