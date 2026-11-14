@@ -1,21 +1,12 @@
 /* ---------- Fonts (see fonts/README.md) ---------- */
 @font-face { font-family: "Orbitron"; font-weight: 500; font-display: swap; src: url("fonts/orbitron/orbitron-latin-500-normal.woff2") format("woff2"); }
 @font-face { font-family: "Orbitron"; font-weight: 700; font-display: swap; src: url("fonts/orbitron/orbitron-latin-700-normal.woff2") format("woff2"); }
-@font-face {
-  font-family: "Octarine"; font-weight: 300; font-display: swap;
-  src: url("fonts/octarine/Octarine-Light.woff2") format("woff2"), url("fonts/octarine/Octarine-Light.woff") format("woff"),
-       url("fonts/octarine/Octarine-Light.otf") format("opentype"), url("fonts/octarine/Octarine-Light.ttf") format("truetype");
-}
-@font-face {
-  font-family: "Octarine"; font-weight: 700; font-display: swap;
-  src: url("fonts/octarine/Octarine-Bold.woff2") format("woff2"), url("fonts/octarine/Octarine-Bold.woff") format("woff"),
-       url("fonts/octarine/Octarine-Bold.otf") format("opentype"), url("fonts/octarine/Octarine-Bold.ttf") format("truetype");
-}
-@font-face {
-  font-family: "Organo"; font-display: swap;
-  src: url("fonts/organo/Organo.woff2") format("woff2"), url("fonts/organo/Organo.woff") format("woff"),
-       url("fonts/organo/Organo.otf") format("opentype"), url("fonts/organo/Organo.ttf") format("truetype");
-}
+@font-face { font-family: "Octarine"; font-weight: 300; font-style: normal; font-display: swap; src: url("fonts/octarine/Octarine-Light.woff2") format("woff2"); }
+@font-face { font-family: "Octarine"; font-weight: 300; font-style: italic; font-display: swap; src: url("fonts/octarine/Octarine-LightOblique.woff2") format("woff2"); }
+@font-face { font-family: "Octarine"; font-weight: 700; font-style: normal; font-display: swap; src: url("fonts/octarine/Octarine-Bold.woff2") format("woff2"); }
+@font-face { font-family: "Octarine"; font-weight: 700; font-style: italic; font-display: swap; src: url("fonts/octarine/Octarine-BoldOblique.woff2") format("woff2"); }
+/* Organo has letters, digits and space only; anything else (e.g. "-") falls back to the next font */
+@font-face { font-family: "Organo"; font-display: swap; src: url("fonts/organo/Organo.woff2") format("woff2"); }
 
 :root {
   /* white / grey, with blue as the only highlight colour */
