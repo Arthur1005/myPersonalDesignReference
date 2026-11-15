@@ -46,7 +46,7 @@ function renderLinks() {
         </a>
         ${editMode ? `<button type="button" class="x" data-del-link="${i}" aria-label="Remove link">×</button>` : ''}
       </li>`).join('')
-    : (editMode ? '<li class="empty-note">No links yet</li>' : '');
+    : '';
   show('links-sec', links.length > 0);
 }
 
@@ -149,7 +149,7 @@ function renderComments() {
         <p>${esc(c.text)}</p>
         ${editMode ? `<button type="button" class="x" data-del-comment="${i}" aria-label="Delete comment">×</button>` : ''}
       </li>`).join('')
-    : (editMode ? '<li class="empty-note" style="border:0;background:none;padding:0">No comments yet</li>' : '');
+    : '';
   show('comments-sec', list.length > 0);
 }
 

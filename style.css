@@ -885,15 +885,29 @@ body.gated .topbar { visibility: hidden; }
 .cal-nav:disabled { opacity: 0.25; cursor: default; }
 .cal-close { margin-left: 4px; }
 
-.cal-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin: 0 0 14px;
+/* streak hero: big number + a trail of the last 14 days */
+.cal-hero { display: flex; align-items: center; gap: 16px; margin: 4px 2px 10px; }
+.cal-hero-num { display: flex; align-items: center; gap: 8px; margin: 0; }
+.cal-hero-num b { font-family: var(--font-logo); font-size: 44px; font-weight: 700; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.cal-hero-num span { font-size: 10px; line-height: 1.25; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.cal-trail-wrap { flex: 1; min-width: 0; }
+.cal-trail { display: flex; align-items: center; justify-content: space-between; height: 18px; }
+.cal-trail .dot {
+  width: 8px; height: 8px; padding: 0; border-radius: 50%;
+  border: 1px solid transparent; background: none; cursor: pointer;
+  transition: transform 0.15s;
 }
-.cal-stats div { padding: 8px 4px; border: 1px solid var(--line); border-radius: 8px; text-align: center; }
-.cal-stats dt { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
-.cal-stats dd { margin: 4px 0 0; font-size: 17px; font-variant-numeric: tabular-nums; }
+.cal-trail .dot:hover { transform: scale(1.5); }
+.cal-trail .dot.done { background: rgba(42, 107, 255, 0.45); }
+.cal-trail .dot.multi { background: var(--accent); width: 11px; height: 11px; }
+.cal-trail .dot.missed { border: 1px dashed rgba(0, 0, 0, 0.35); }
+.cal-trail .dot.today { border: 1.5px solid var(--accent); }
+.cal-trail .dot.before { background: rgba(0, 0, 0, 0.08); width: 4px; height: 4px; }
+.cal-trail .dot.sel { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ink); }
+.cal-trail-label { display: flex; justify-content: space-between; margin: 4px 0 0; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.cal-sub { margin: 0 2px 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--dim); }
+.cal-sub b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.cal-sub i { font-style: normal; margin: 0 7px; opacity: 0.6; }
 
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .cal-grid .wd { font-size: 10px; text-align: center; color: var(--dim); padding-bottom: 4px; letter-spacing: 0.06em; }
@@ -990,3 +1004,81 @@ body.gated .topbar { visibility: hidden; }
 /* highlighted words in hints */
 .hl { color: var(--accent); font-weight: 600; }
 .tooltip .hl { padding: 1px 5px; margin-right: 1px; border-radius: 4px; background: rgba(42, 107, 255, 0.12); }
+
+/* ================================================================== *
+ *  Card layout: one rhythm for every section
+ *  (32px side padding, 22px between sections, 10px label gap,
+ *   40px controls with 10px corners)
+ * ================================================================== */
+.panel .meta { padding: 30px 32px 8px; }
+.panel .day { padding-right: 48px; }
+.panel h2 { margin: 8px 0 0; padding-right: 48px; font-size: 26px; line-height: 1.2; }
+.panel .note { margin: 12px 0 0; font-size: 14px; line-height: 1.6; }
+.panel .close { top: 18px; right: 18px; }
+
+.panel .kw, .panel .sec { margin: 0; padding: 22px 0; border-top: 1px solid var(--line); }
+.panel .kw { margin-top: 24px; }
+.panel .sec:last-child { padding-bottom: 26px; }
+.sec h3, .kw h3 { margin: 0 0 12px; font-size: 11px; letter-spacing: 0.16em; color: var(--dim); }
+.panel ul:empty, .panel ol:empty { display: none; }
+.panel .kw-chips:empty { display: grid; }
+
+/* keywords: chips and the add box are one unit */
+.kw-box { border: 1px solid var(--line); border-radius: 12px; background: var(--field); transition: border-color 0.15s, box-shadow 0.15s; }
+.kw-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42, 107, 255, 0.12); }
+.kw-box .kw-chips { border: 0; border-radius: 11px; background: none; }
+.kw-box .kw-chips:empty { height: 56px; }
+.kw-box .kw-search { margin: 0; border-top: 1px solid var(--line); }
+.kw-box .kw-search input {
+  height: 42px; padding: 0 14px; border: 0; border-radius: 0 0 11px 11px; background: #fff; font-size: 13px;
+}
+.kw-box .kw-list { top: calc(100% + 6px); border-radius: 10px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1); }
+
+/* links: type, address and Add in one bar */
+.links { gap: 8px; }
+.links a { min-height: 40px; padding: 0 12px; border-radius: 10px; background: #fff; }
+.links li { gap: 6px; }
+.links:not(:empty) + .add-link { margin-top: 10px; }
+.add-link {
+  margin-top: 0; gap: 0; height: 42px; align-items: stretch;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.add-link:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42, 107, 255, 0.12); }
+.add-link select, .add-link input { border: 0; border-radius: 0; background: none; padding: 0 12px; }
+.add-link select { border-right: 1px solid var(--line); color: var(--ink-2); padding-right: 6px; cursor: pointer; }
+.add-link button { border: 0; border-radius: 0; padding: 0 18px; font-size: 13px; font-weight: 500; }
+.form-error { margin: 8px 2px 0; }
+
+/* similar projects */
+.similar { gap: 10px; }
+.similar:not(:empty) + .drop { margin-top: 12px; }
+.similar a { border-radius: 8px; }
+.drop { margin-top: 0; padding: 16px; gap: 3px; border-radius: 10px; border-color: rgba(0, 0, 0, 0.2); background: var(--field); font-weight: 500; }
+.drop small { font-weight: 400; }
+
+/* comments: text and Post share one box */
+.comments { gap: 8px; }
+.comments li { padding: 12px 36px 12px 14px; border-left: 0; border-radius: 10px; background: var(--field); }
+.comments time { margin-bottom: 5px; }
+.comments:not(:empty) + .add-comment { margin-top: 10px; }
+.add-comment {
+  margin-top: 0; gap: 0; position: relative;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.add-comment:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42, 107, 255, 0.12); }
+.add-comment textarea { border: 0; background: none; padding: 12px 14px 4px; min-height: 58px; resize: none; }
+.add-comment button { align-self: flex-end; margin: 4px 8px 8px; padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+
+/* related */
+.related { gap: 8px; }
+.related button { padding: 8px; gap: 12px; border-radius: 10px; background: #fff; }
+
+/* footer */
+.stepper { padding: 14px 32px 18px; }
+
+@media (max-width: 600px) {
+  .panel .meta { padding: 22px 20px 4px; }
+  .stepper { padding: 12px 20px 16px; }
+}

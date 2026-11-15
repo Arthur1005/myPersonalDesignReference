@@ -69,6 +69,17 @@ function render() {
   $('st-total').textContent = s.total;
   $('cal-streak').textContent = s.streak;
 
+  // trail: one dot per day for the last two weeks
+  let trail = '';
+  for (let i = 13; i >= 0; i--) {
+    const key = iso(addDays(new Date(), -i));
+    const st0 = statusOf(key);
+    const n0 = (byDate.get(key) || []).length;
+    const what = { done: '1 entry', multi: `${n0} entries`, missed: 'missed', today: 'nothing yet', before: 'before you started', future: '' }[st0];
+    trail += `<button type="button" class="dot ${st0}${key === selected ? ' sel' : ''}" data-day="${key}" title="${parse(key).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · ${what}" aria-label="${parse(key).toDateString()}, ${what}"></button>`;
+  }
+  $('cal-trail').innerHTML = trail;
+
   const first = new Date(y, m, 1);
   const lead = (first.getDay() + 6) % 7;                 // Monday-first weeks
   const days = new Date(y, m + 1, 0).getDate();
@@ -148,6 +159,13 @@ dayBox.addEventListener('click', (e) => {
   if (b) window.orbit.openEntry(Number(b.dataset.entry));
 });
 
+$('cal-trail').addEventListener('click', (e) => {
+  const b = e.target.closest('.dot');
+  if (!b) return;
+  const d = parse(b.dataset.day);
+  view = { y: d.getFullYear(), m: d.getMonth() };
+  selectDay(b.dataset.day);
+});
 $('cal-prev').addEventListener('click', () => { view = view.m === 0 ? { y: view.y - 1, m: 11 } : { y: view.y, m: view.m - 1 }; render(); });
 $('cal-next').addEventListener('click', () => { view = view.m === 11 ? { y: view.y + 1, m: 0 } : { y: view.y, m: view.m + 1 }; render(); });
 

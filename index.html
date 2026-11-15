@@ -81,12 +81,14 @@
       <button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button>
       <button type="button" class="cal-close" id="cal-close" aria-label="Close calendar">×</button>
     </header>
-    <dl class="cal-stats">
-      <div><dt>Current streak</dt><dd id="st-streak">0</dd></div>
-      <div><dt>Best streak</dt><dd id="st-best">0</dd></div>
-      <div><dt>Days done</dt><dd id="st-done">0</dd></div>
-      <div><dt>Entries</dt><dd id="st-total">0</dd></div>
-    </dl>
+    <div class="cal-hero">
+      <p class="cal-hero-num"><b id="st-streak">0</b><span>day<br />streak</span></p>
+      <div class="cal-trail-wrap">
+        <div class="cal-trail" id="cal-trail" aria-label="Last 14 days"></div>
+        <p class="cal-trail-label"><span>2 weeks ago</span><span>today</span></p>
+      </div>
+    </div>
+    <p class="cal-sub">Best streak <b id="st-best">0</b><i>·</i><b id="st-done">0</b> days done<i>·</i><b id="st-total">0</b> entries</p>
     <div class="cal-grid" id="cal-grid" role="grid"></div>
     <ul class="cal-legend">
       <li><i class="lg done"></i>Done</li>
@@ -109,19 +111,16 @@
       <p class="note" id="p-note"></p>
       <section class="kw" aria-label="Keywords">
         <h3>Keywords</h3>
-        <ul class="kw-chips" id="kw-chips"></ul>
-        <div class="kw-search" id="kw-search">
-          <input id="kw-input" type="text" autocomplete="off" spellcheck="false"
-                 placeholder="Search keywords…" role="combobox" aria-expanded="false"
-                 aria-controls="kw-list" aria-autocomplete="list" />
-          <ul class="kw-list" id="kw-list" role="listbox" hidden></ul>
+        <div class="kw-box">
+          <ul class="kw-chips" id="kw-chips"></ul>
+          <div class="kw-search" id="kw-search">
+            <input id="kw-input" type="text" autocomplete="off" spellcheck="false"
+                   placeholder="Add a keyword…" role="combobox" aria-expanded="false"
+                   aria-controls="kw-list" aria-autocomplete="list" />
+            <ul class="kw-list" id="kw-list" role="listbox" hidden></ul>
+          </div>
         </div>
       </section>
-      <section class="sec" id="related-sec" aria-label="Related panels">
-        <h3>Related on your globe</h3>
-        <ul class="related" id="related"></ul>
-      </section>
-
       <section class="sec" id="links-sec" aria-label="Links">
         <h3>Links</h3>
         <ul class="links" id="links"></ul>
@@ -142,8 +141,8 @@
         <ul class="similar" id="similar"></ul>
         <label class="drop edit-only" id="similar-drop">
           <input type="file" id="similar-file" accept="image/*" multiple />
-          <span>+ Add from your device</span>
-          <small>or drop images here</small>
+          <span>+ Add images</span>
+          <small>from your device, or drop them here</small>
         </label>
       </section>
 
@@ -151,9 +150,14 @@
         <h3>Comments</h3>
         <ol class="comments" id="comments"></ol>
         <form class="add-comment edit-only" id="comment-form" novalidate>
-          <textarea id="comment-text" rows="2" maxlength="2000" placeholder="Write a comment…  (⌘/Ctrl + Enter to post)" aria-label="Comment"></textarea>
+          <textarea id="comment-text" rows="2" maxlength="2000" placeholder="Write a comment…" aria-label="Comment"></textarea>
           <button type="submit">Post</button>
         </form>
+      </section>
+
+      <section class="sec" id="related-sec" aria-label="Related panels">
+        <h3>Related on your globe</h3>
+        <ul class="related" id="related"></ul>
       </section>
     </div>
     <nav class="stepper">
