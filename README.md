@@ -100,6 +100,8 @@ The site will appear at `https://<username>.github.io/myPersonalDesignReference/
 
 ## Interactions
 
+The **?** button (bottom right) shows these hints; it opens by itself on a first visit.
+
 - Drag to turn, scroll to zoom. Or click once on the globe (not on a lit panel) and it follows your cursor; click again
   (or press `Esc`) to release. A hint beside the cursor says what a click will do
 - Hover a panel to see its title, click to open it

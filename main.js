@@ -862,3 +862,26 @@ async function boot() {
 }
 
 boot();
+
+/* ------------------------------------------------------------------ *
+ *  "?" help: hints live in a corner pop-up instead of over the globe
+ * ------------------------------------------------------------------ */
+{
+  const help = document.getElementById('help');
+  const btn = document.getElementById('help-btn');
+  const set = (open) => { help.classList.toggle('open', open); btn.setAttribute('aria-expanded', String(open)); };
+  btn.addEventListener('click', () => set(!help.classList.contains('open')));
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#help')) set(false); });
+  // show once per browser on the first visit, then tuck away
+  let seen = false;
+  try { seen = localStorage.getItem('designOrbit.helpSeen') === '1'; } catch { /* ignore */ }
+  if (!seen) {
+    const show = () => {
+      if (document.body.classList.contains('gated')) { setTimeout(show, 500); return; }
+      set(true);
+      try { localStorage.setItem('designOrbit.helpSeen', '1'); } catch { /* ignore */ }
+      setTimeout(() => set(false), 6000);
+    };
+    setTimeout(show, 1200);
+  }
+}

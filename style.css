@@ -87,7 +87,7 @@ body { background: transparent; }
   pointer-events: none;
   transition: opacity 0.4s;
 }
-body.panel-open .hint { opacity: 0; }
+
 
 .tooltip {
   position: fixed;
@@ -272,7 +272,7 @@ body.panel-open .scrim { opacity: 1; visibility: visible; transition: opacity 0.
 }
 .gate[hidden] { display: none; }
 .gate.leaving { opacity: 0; pointer-events: none; }
-body.gated .masthead, body.gated .hint { visibility: hidden; }
+body.gated .masthead { visibility: hidden; }
 .gate-card {
   width: min(380px, 100%);
   padding: 30px 28px 24px;
@@ -996,7 +996,6 @@ body.gated .topbar { visibility: hidden; }
   .owner { left: 14px; bottom: 14px; }
   .savebar { left: 58px; right: 12px; bottom: 12px; flex-wrap: wrap; }
   .core-switch { right: 50%; transform: translateX(50%); bottom: 44px; }
-  .hint { display: none; }
   .calendar { top: auto; bottom: 12px; right: 12px; left: 12px; width: auto; max-height: 70vh; }
   .panel .meta { overflow: visible; }
 }
@@ -1081,4 +1080,35 @@ body.gated .topbar { visibility: hidden; }
 @media (max-width: 600px) {
   .panel .meta { padding: 22px 20px 4px; }
   .stepper { padding: 12px 20px 16px; }
+}
+
+/* ---------- "?" help in the bottom-right corner ---------- */
+.help { position: fixed; right: 28px; bottom: 22px; z-index: 3; }
+body.gated .help, body.panel-open .help { visibility: hidden; }
+.core-switch { right: 74px; }
+.help-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--panel-bg); color: var(--dim);
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.help-btn:hover, .help.open .help-btn { color: var(--accent); border-color: var(--accent); }
+.help-pop {
+  position: absolute; right: 0; bottom: calc(100% + 10px);
+  width: max-content; max-width: min(300px, calc(100vw - 40px));
+  padding: 12px 16px; background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+  opacity: 0; visibility: hidden; transform: translateY(6px);
+  transition: opacity 0.2s, transform 0.2s, visibility 0s 0.2s;
+}
+.help:hover .help-pop, .help.open .help-pop, .help-btn:focus-visible + .help-pop {
+  opacity: 1; visibility: visible; transform: none; transition: opacity 0.2s, transform 0.2s;
+}
+.help-pop p { margin: 0; padding: 4px 0; font-size: 12.5px; color: var(--ink-2); }
+.help-pop b { color: var(--ink); font-weight: 600; }
+.help-pop b.hl { color: var(--accent); }
+@media (hover: none) { .help-pop .mouse-only { display: none; } }
+@media (max-width: 600px) {
+  .help { right: 14px; bottom: 14px; }
+  .core-switch { right: 50%; }
 }
