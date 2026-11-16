@@ -58,6 +58,23 @@
       "date": "2026-11-16",
       "title": "How Claude show step by step",
       "image": "entries/2026-11-16-wej-9mhx4.webp"
+    },
+    {
+      "date": "2026-11-16",
+      "title": "Royden So's Portfolio",
+      "image": "entries/2026-11-16-screen-recording-2026-11-16-at-5-30-29-p-fwqcf.webp",
+      "video": "entries/2026-11-16-screen-recording-2026-11-16-at-5-30-29-p-1xtph.webm",
+      "frames": [
+        "entries/frames/2026-11-16-screen-recording-2026-11-16-at-5-30-29-p-unbqn.webp",
+        "entries/frames/2026-11-16-screen-recording-2026-11-16-at-5-30-29-p-qdw58.webp",
+        "entries/frames/2026-11-16-screen-recording-2026-11-16-at-5-30-29-p-wprw8.webp",
+        "entries/frames/2026-11-16-screen-recording-2026-11-16-at-5-30-29-p-i1mcg.webp"
+      ],
+      "keywords": [
+        "portfolio",
+        "interaction design",
+        "design precedent"
+      ]
     }
   ]
 }
