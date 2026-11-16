@@ -37,10 +37,20 @@
 
   <div class="topbar">
     <button id="add-open" class="add-open" type="button" hidden>+ Add</button>
+    <button id="mod-open" class="cal-toggle mod-open" type="button" aria-controls="mod" hidden>Comments</button>
     <button id="cal-toggle" class="cal-toggle" type="button" aria-expanded="false" aria-controls="calendar">
       <span class="cal-flame" id="cal-streak">0</span> day streak · Calendar
     </button>
   </div>
+
+  <section id="mod" class="calendar mod" aria-label="Visitor comments waiting for approval" hidden>
+    <header class="cal-head">
+      <h2>Waiting for approval</h2>
+      <button type="button" class="cal-close" id="mod-close" aria-label="Close">×</button>
+    </header>
+    <p class="cal-empty" id="mod-status"></p>
+    <ul class="mod-list" id="mod-list"></ul>
+  </section>
 
   <div class="add-scrim" id="add-scrim" hidden></div>
   <form class="add-dialog" id="add-dialog" role="dialog" aria-modal="true" aria-labelledby="add-title" novalidate hidden>
@@ -169,6 +179,16 @@
           <textarea id="comment-text" rows="2" maxlength="2000" placeholder="Write a comment…" aria-label="Comment"></textarea>
           <button type="submit">Post</button>
         </form>
+        <ol class="comments" id="vcomments"></ol>
+        <form class="add-comment v-form" id="v-form" novalidate hidden>
+          <textarea id="v-text" rows="2" maxlength="1000" placeholder="Leave a comment…" aria-label="Your comment"></textarea>
+          <div class="v-row">
+            <input id="v-name" type="text" maxlength="40" placeholder="Your name (optional)" aria-label="Your name (optional)" autocomplete="name" />
+            <input id="v-website" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <button type="submit">Post</button>
+          </div>
+        </form>
+        <p class="form-note" id="v-note" role="status" hidden></p>
       </section>
 
       <section class="sec" id="related-sec" aria-label="Related panels">
@@ -241,6 +261,7 @@
   <script type="module" src="main.js"></script>
   <script type="module" src="keywords.js"></script>
   <script type="module" src="details.js"></script>
+  <script type="module" src="comments.js"></script>
   <script type="module" src="add.js"></script>
   <script type="module" src="related.js"></script>
   <script type="module" src="lightbox.js"></script>

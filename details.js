@@ -145,7 +145,7 @@ function renderComments() {
   $('comments').innerHTML = list.length
     ? list.map((c, i) => `
       <li>
-        <time datetime="${esc(c.at)}">${esc(fmtTime(c.at))}</time>
+        <time datetime="${esc(c.at)}"><b>Arthur</b> · ${esc(fmtTime(c.at))}</time>
         <p>${esc(c.text)}</p>
         ${editMode ? `<button type="button" class="x" data-del-comment="${i}" aria-label="Delete comment">×</button>` : ''}
       </li>`).join('')

@@ -75,6 +75,22 @@ Changes are kept in your browser as a draft (images too, so a reload won't lose 
   **Contents: Read and write**. The site updates about a minute later.
 - **Download JSON** gives you the updated `entries.json` (and any new images) to commit yourself.
 
+## Visitor comments (optional)
+
+Visitors can leave a comment on any panel, with their name if they like. Comments only show once you approve them.
+This uses a free [Supabase](https://supabase.com) project as the comment store, and stays off until you set it up:
+
+1. Create a free Supabase account and a new project (any name and region).
+2. In the project, open **SQL Editor → New query**, paste in everything from [`supabase/setup.sql`](supabase/setup.sql),
+   **change the passphrase on the last line** to a long one only you know, and press **Run**.
+3. Open **Project Settings → API** (or the **Connect** button) and copy the **Project URL** and the **publishable / anon key**.
+4. Put those two values into `config.js` in this repo and commit. They are safe to publish: the database only lets the
+   public read approved comments and submit new ones.
+
+After that, when you're unlocked a **Comments** button appears in the top bar with a count of comments waiting. The first
+time, it asks for your passphrase (kept in that browser only). Approve or delete from there; you can also delete an
+approved visitor comment from its panel.
+
 ## Progress calendar
 
 The **Calendar** button (top right) shows your current streak and opens a month view:
@@ -124,6 +140,9 @@ gate.js             welcome panel + owner login (lock icon)
 store.js            drafts, image uploads, Save to GitHub / Download
 keywords.js         floating keyword chips, search, spelling suggestions
 details.js          links, similar projects, comments
+comments.js         visitor comments + approval (Supabase, optional)
+config.js           where the two Supabase values go
+supabase/setup.sql  one-time database setup for visitor comments
 related.js          related-panel suggestions
 lightbox.js         full-screen image viewer
 add.js              “+ Add” dialog for new panels

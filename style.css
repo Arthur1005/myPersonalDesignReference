@@ -1153,3 +1153,31 @@ body.gated .help, body.panel-open .help { visibility: hidden; }
 .shrink-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s linear; }
 #shrink-go { justify-self: start; font: inherit; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); cursor: pointer; }
 #shrink-go:disabled { opacity: 0.5; cursor: default; }
+
+/* ---------- visitor comments ---------- */
+.comments time b { color: var(--ink); font-weight: 600; letter-spacing: 0; }
+#vcomments:not(:empty) { margin-top: 8px; }
+#comments:empty + .add-comment + #vcomments:not(:empty) { margin-top: 10px; }
+.v-form { display: flex; margin-top: 10px; }
+.v-form[hidden] { display: none; }
+.v-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px 8px 14px; border-top: 1px solid var(--line); }
+.v-row input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: 13px; color: var(--ink); padding: 6px 0; }
+.v-row button { margin: 0; }
+#v-website { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.form-note { margin: 8px 2px 0; font-size: 12px; color: var(--accent); }
+.form-note.bad { color: #c0392b; }
+.form-note[hidden] { display: none; }
+
+.mod-open b { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; background: var(--accent); color: var(--on-accent); }
+.mod .cal-head h2 { text-align: left; }
+.mod-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.mod-list:empty { display: none; }
+.mod-list li { padding: 12px 14px; border-radius: 10px; background: var(--field); }
+.mod-list p { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.mod-list .mod-where { margin: 0 0 4px; font-family: var(--font-title); font-weight: 700; font-size: 13px; color: var(--ink); }
+.mod-list time { font-size: 11px; color: var(--dim); }
+.mod-list time b { color: var(--ink); }
+.mod-actions { display: flex; gap: 6px; margin-top: 10px; }
+.mod-actions button { font: inherit; font-size: 12px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; }
+.mod-actions .primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.mod-actions button:disabled { opacity: 0.5; }
