@@ -1181,3 +1181,35 @@ body.gated .help, body.panel-open .help { visibility: hidden; }
 .mod-actions button { font: inherit; font-size: 12px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; }
 .mod-actions .primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .mod-actions button:disabled { opacity: 0.5; }
+
+/* ---------- storage meter (owner) ---------- */
+.owner { display: flex; align-items: center; gap: 8px; }
+.savebar { left: 28px; bottom: 68px; }
+.usage-btn {
+  height: 36px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--panel-bg); color: var(--dim);
+  font: inherit; font-size: 12px; letter-spacing: 0.04em; cursor: pointer;
+}
+.usage-btn[hidden], .usage-pop[hidden], .usage-row[hidden], .add-usage[hidden] { display: none; }
+.usage-btn:hover { color: var(--ink); border-color: rgba(0, 0, 0, 0.3); }
+.usage-btn.warn { color: #9a6200; border-color: #d9a441; background: #fff8e8; font-weight: 600; }
+.usage-btn.full { color: #fff; border-color: #c0392b; background: #c0392b; font-weight: 600; }
+.usage-pop {
+  position: absolute; left: 0; bottom: calc(100% + 10px); width: 320px;
+  padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.14);
+}
+.usage-row + .usage-row { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.usage-row p { margin: 0; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; }
+.usage-row b { font-weight: 600; }
+.usage-num { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.usage-bar { height: 6px; margin: 8px 0; border-radius: 3px; background: rgba(0, 0, 0, 0.08); overflow: hidden; }
+.usage-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+.usage-row .usage-note { font-size: 11.5px; color: var(--dim); display: block; line-height: 1.45; }
+.usage-row.warn .usage-bar i { background: #d9a441; }
+.usage-row.warn .usage-note { color: #9a6200; }
+.usage-row.full .usage-bar i { background: #c0392b; }
+.usage-row.full .usage-note { color: #c0392b; }
+.add-usage { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #9a6200; background: #fff8e8; border: 1px solid #d9a441; }
+.add-usage.full { color: #c0392b; background: #fdf1ef; border-color: #c0392b; }
+@media (max-width: 600px) { .savebar { left: 12px; bottom: 60px; } .usage-pop { width: min(320px, calc(100vw - 28px)); } }

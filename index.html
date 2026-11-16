@@ -62,6 +62,7 @@
       <video id="add-vpreview" muted loop playsinline hidden></video>
       <span class="add-drop-text" id="add-drop-text"><b>Choose an image or video</b><small>or drop it here · images or video (bigger videos can be shrunk to fit)</small></span>
     </label>
+    <p class="add-usage" id="add-usage" hidden></p>
     <div class="add-shrink" id="add-shrink" hidden>
       <p id="shrink-text"></p>
       <div class="shrink-bar" id="shrink-bar" hidden><i id="shrink-fill"></i></div>
@@ -209,6 +210,20 @@
         <path class="shackle" d="M8 11V7a4 4 0 0 1 8 0v4"></path>
       </svg>
     </button>
+    <button type="button" class="usage-btn" id="usage-btn" aria-expanded="false" aria-controls="usage-pop" hidden>Storage</button>
+    <div class="usage-pop" id="usage-pop" role="dialog" aria-label="Storage used" hidden>
+      <p class="lock-title">Storage</p>
+      <div class="usage-row" id="usage-r2">
+        <p><b>Videos</b> <span class="usage-num"></span></p>
+        <div class="usage-bar"><i></i></div>
+        <p class="usage-note"></p>
+      </div>
+      <div class="usage-row" id="usage-gh">
+        <p><b>Images and site</b> <span class="usage-num"></span></p>
+        <div class="usage-bar"><i></i></div>
+        <p class="usage-note"></p>
+      </div>
+    </div>
     <div class="lock-pop" id="lock-pop" role="dialog" aria-label="Owner login" hidden>
       <div>
         <p class="lock-title">Owner PIN</p>
@@ -263,6 +278,7 @@
   <script type="module" src="details.js"></script>
   <script type="module" src="comments.js"></script>
   <script type="module" src="add.js"></script>
+  <script type="module" src="storage.js"></script>
   <script type="module" src="related.js"></script>
   <script type="module" src="lightbox.js"></script>
   <script type="module" src="calendar.js"></script>

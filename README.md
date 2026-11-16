@@ -106,6 +106,13 @@ Cloudflare R2 bucket. Stills, frames and everything else still save to GitHub.
 The first time you save a video, the site asks for the Access Key ID and Secret Access Key and keeps them in that
 browser only. The save bar shows upload progress.
 
+### Storage meter
+
+When you're unlocked, a **Storage** button sits beside the lock. It shows how full the video bucket is against the free
+10 GB (added up from the size of each video you add through the site) and how big this repo is against GitHub's 1 GB
+guideline. It turns amber at 80% and red at 95%, and the Add dialog warns you before a video takes you past 80% or over
+the free allowance, with the rough monthly cost.
+
 ## Visitor comments (optional)
 
 Visitors can leave a comment on any panel, with their name if they like. Comments only show once you approve them.
@@ -174,6 +181,7 @@ details.js          links, similar projects, comments
 comments.js         visitor comments + approval (Supabase, optional)
 config.js           settings for visitor comments (Supabase) and big videos (R2)
 r2.js               uploads videos to the R2 bucket
+storage.js          storage meter and limit warnings
 supabase/setup.sql  one-time database setup for visitor comments
 related.js          related-panel suggestions
 lightbox.js         full-screen image viewer

@@ -13,6 +13,6 @@ export const SUPABASE_ANON_KEY = '';   // the project's publishable / anon key
  *  Setup steps are in the README under "Big videos". These three values
  *  are safe to publish; the upload keys stay in your own browser.
  * ------------------------------------------------------------------ */
-export const R2_ACCOUNT_ID = '';   // Cloudflare account ID (32 letters and digits)
-export const R2_BUCKET = '';       // bucket name, e.g. 'design-orbit'
-export const R2_PUBLIC_URL = '';   // the bucket's public address, e.g. 'https://pub-xxxxxxxx.r2.dev'
+export const R2_ACCOUNT_ID = 'f37b6895132d496c5e4e61f0ce854715';   // Cloudflare account ID (32 letters and digits)
+export const R2_BUCKET = 'design-orbit';       // bucket name, e.g. 'design-orbit'
+export const R2_PUBLIC_URL = 'https://pub-d17162a0f9b842afb541853412f07e91.r2.dev';   // the bucket's public address, e.g. 'https://pub-xxxxxxxx.r2.dev'

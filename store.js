@@ -180,7 +180,8 @@ export async function createEntry({ file, video, frames, title, date, note }) {
   const image = await stageUpload(file, { date }, ENTRY_DIR);
   const entry = { date, title: t, image };
   if (video) {
-    entry.video = await stageUpload(video, { date }, ENTRY_DIR, { toBucket: R2_ON });            // `image` is the video's still frame
+    entry.video = await stageUpload(video, { date }, ENTRY_DIR, { toBucket: R2_ON });
+    entry.videoBytes = video.size;                                          // lets the storage meter add things up            // `image` is the video's still frame
     entry.frames = [];
     for (const f of frames || []) entry.frames.push(await stageUpload(f, { date }, `${ENTRY_DIR}/frames`));
   }
@@ -238,7 +239,7 @@ function updateSavebar(message) {
 }
 
 /* ---------- export ---------- */
-const FIELD_ORDER = ['date', 'title', 'image', 'video', 'frames', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
+const FIELD_ORDER = ['date', 'title', 'image', 'video', 'videoBytes', 'frames', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
 function cleanEntry(e) {
   const out = {};
   const src = { ...e };
@@ -274,7 +275,7 @@ document.getElementById('save-download').addEventListener('click', () => {
 });
 
 /* ---------- GitHub ---------- */
-function repoInfo() {
+export function repoInfo() {
   const m = location.hostname.match(/^([^.]+)\.github\.io$/);
   const seg = location.pathname.split('/').filter(Boolean)[0];
   if (m && seg) return { owner: m[1], repo: seg, branch: FALLBACK_REPO.branch };

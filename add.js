@@ -200,6 +200,7 @@ function setFile(f) {
   }
   file = f;
   original = null;
+  window.dispatchEvent(new CustomEvent('orbit:picked', { detail: { file: f, video } }));
   needsShrink = video && !R2_ON && f.size > MAX_VIDEO_MB * 1e6;   // with a video bucket, videos go up at full size
   // any other video can optionally be converted to WebM (usually much smaller); already-WebM files are left alone
   const optional = video && !needsShrink && !/webm/i.test(f.type + f.name);
@@ -247,6 +248,7 @@ function setFile(f) {
 function showErr(el, msg) { el.textContent = msg; el.hidden = false; }
 
 function reset() {
+  $('add-usage').hidden = true;
   file = null;
   original = null;
   needsShrink = false;
