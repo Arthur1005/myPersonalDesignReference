@@ -12,7 +12,10 @@ export const UPLOAD_DIR = 'entries/similar';
 
 const LS_DRAFTS = 'designOrbit.drafts.v2';
 const LS_DRAFTS_V1 = 'designOrbit.drafts';
+import { R2_ON, R2_BASE, isR2, r2Upload, R2AuthError } from './r2.js';
+
 const LS_TOKEN = 'designOrbit.githubToken';
+const LS_R2 = 'designOrbit.r2Keys';
 const LS_ADDED = 'designOrbit.added.v1';
 export const ENTRY_DIR = 'entries';
 
@@ -125,10 +128,12 @@ async function prepareImage(file) {
 }
 
 /** Stage an image from the device; returns the repo path it will be saved to. */
-export async function stageUpload(file, entry, dir = UPLOAD_DIR) {
+export async function stageUpload(file, entry, dir = UPLOAD_DIR, { toBucket = false } = {}) {
   const { blob, ext } = await prepareImage(file);
   const rand = Math.random().toString(36).slice(2, 7);
-  const path = `${dir}/${entry.date}-${slug(file.name)}-${rand}.${ext}`;
+  const name = `${entry.date}-${slug(file.name)}-${rand}.${ext}`;
+  // big videos go to the R2 bucket (their "path" is the public address); everything else into this repo
+  const path = toBucket ? `${R2_BASE}/videos/${name}` : `${dir}/${name}`;
   const url = URL.createObjectURL(blob);
   pending.set(path, { blob, url });
   previews.set(path, url);
@@ -175,7 +180,7 @@ export async function createEntry({ file, video, frames, title, date, note }) {
   const image = await stageUpload(file, { date }, ENTRY_DIR);
   const entry = { date, title: t, image };
   if (video) {
-    entry.video = await stageUpload(video, { date }, ENTRY_DIR);            // `image` is the video's still frame
+    entry.video = await stageUpload(video, { date }, ENTRY_DIR, { toBucket: R2_ON });            // `image` is the video's still frame
     entry.frames = [];
     for (const f of frames || []) entry.frames.push(await stageUpload(f, { date }, `${ENTRY_DIR}/frames`));
   }
@@ -311,8 +316,28 @@ saveBtn.addEventListener('click', async () => {
     // 1. images first, so entries.json never points at a missing file
     let i = 0;
     const total = pending.size;
+    let r2Keys = null;
+    if ([...pending.keys()].some(isR2)) {
+      try { r2Keys = JSON.parse(ls.get(LS_R2) || 'null'); } catch { r2Keys = null; }
+      if (!r2Keys) {
+        const accessKeyId = (window.prompt('Videos upload to your Cloudflare R2 bucket.\nPaste the R2 token\'s Access Key ID (stored in this browser only):') || '').trim();
+        const secretAccessKey = accessKeyId && (window.prompt('Now paste its Secret Access Key:') || '').trim();
+        if (!accessKeyId || !secretAccessKey) { updateSavebar(); return; }
+        r2Keys = { accessKeyId, secretAccessKey };
+        ls.set(LS_R2, JSON.stringify(r2Keys));
+      }
+    }
     for (const [path, { blob }] of [...pending]) {
-      updateSavebar(`Uploading file ${++i} of ${total}…${blob.size > 8e6 ? ' (large, may take a minute)' : ''}`);
+      i++;
+      if (isR2(path)) {
+        const size = `${(blob.size / 1e6).toFixed(0)} MB`;
+        updateSavebar(`Uploading video (${size})… 0%`);
+        await r2Upload(path, blob, r2Keys, (p) => updateSavebar(`Uploading video (${size})… ${Math.round(p * 100)}%`));
+        pending.delete(path);
+        idb('readwrite', (s) => s.delete(path)).catch(() => {});
+        continue;
+      }
+      updateSavebar(`Uploading file ${i} of ${total}…${blob.size > 8e6 ? ' (large, may take a minute)' : ''}`);
       const bytes = new Uint8Array(await blob.arrayBuffer());
       await gh(`${api}/${path}`, {
         method: 'PUT',
@@ -363,6 +388,9 @@ saveBtn.addEventListener('click', async () => {
     if (err instanceof AuthError) {
       ls.del(LS_TOKEN);
       updateSavebar('GitHub rejected the token — try again with a new one');
+    } else if (err instanceof R2AuthError) {
+      ls.del(LS_R2);
+      updateSavebar('Cloudflare rejected the upload keys — press Save to enter them again');
     } else {
       updateSavebar(`Couldn't save: ${err.message}`);
     }

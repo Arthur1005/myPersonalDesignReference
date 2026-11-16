@@ -702,7 +702,15 @@ function openEntry(dayIndex, { fly = true } = {}) {
   el('vid-ui').hidden = !e.video;
   if (e.video) {
     const src = resolveImage(e.video);
-    if (vid.dataset.src !== src) { vid.dataset.src = src; vid.poster = resolveImage(e.image); vid.src = src; }
+    if (vid.dataset.src !== src) {
+      vid.dataset.src = src;
+      vid.poster = resolveImage(e.image);
+      // videos in the bucket are on another address: ask for them in a way that lets Magnify read a frame
+      const remote = /^https?:/.test(src) && !src.startsWith(location.origin);
+      if (remote) vid.crossOrigin = 'anonymous'; else vid.removeAttribute('crossorigin');
+      vid.onerror = remote ? () => { vid.onerror = null; vid.removeAttribute('crossorigin'); vid.src = src; vid.play().catch(() => {}); } : null;
+      vid.src = src;
+    }
     vid.muted = true;
     vid.play().catch(() => {});
   } else if (vid.dataset.src) {

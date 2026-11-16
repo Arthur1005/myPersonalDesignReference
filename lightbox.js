@@ -117,10 +117,11 @@ $('vid-magnify').addEventListener('click', () => {
   c.width = v.videoWidth;
   c.height = v.videoHeight;
   c.getContext('2d').drawImage(v, 0, 0);
-  c.toBlob((blob) => {
+  try { c.toBlob(done, 'image/jpeg', 0.92); } catch { /* the bucket's CORS setting doesn't allow reading frames */ }
+  function done(blob) {
     if (!blob) return;
     const st = window.orbit.state;
     const t = Math.floor(v.currentTime);
     openLightbox([{ src: URL.createObjectURL(blob), caption: `${st.entries[st.current]?.title || ''}  ·  frame at ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` }], 0);
-  }, 'image/jpeg', 0.92);
+  }
 });

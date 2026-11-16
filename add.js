@@ -4,6 +4,7 @@
  *  with everything else when you press "Save to GitHub".
  * ------------------------------------------------------------------ */
 import { editMode, createEntry, whenReady } from './store.js';
+import { R2_ON } from './r2.js';
 
 const $ = (id) => document.getElementById(id);
 const openBtn = $('add-open');
@@ -38,7 +39,8 @@ const mb = (bytes) => (bytes / 1e6).toFixed(bytes < 1e7 ? 1 : 0);
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 const TARGET_MB = 20;            // aim a little under the limit
 const MAX_SHRINK_SECONDS = 300;  // longer than this would look too rough at 20 MB
-const MAX_VIDEO_MB = 25;   // videos live in the GitHub repo, so keep them short and light
+const MAX_VIDEO_MB = 25;
+const MAX_BUCKET_MB = 1000;      // per video, when a video bucket is set up   // videos live in the GitHub repo, so keep them short and light
 const isVideo = (f) => f.type.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(f.name);
 
 /** From a video: one still for lists and cards, plus a few small frames for the globe to flip through. */
@@ -89,7 +91,7 @@ function probeDuration(f) {
  * Re-record a video smaller, in the browser: it plays through once onto a canvas (max 1280px)
  * and is recorded at a bitrate chosen so the result lands around TARGET_MB.
  */
-function shrinkVideo(f, onProgress) {
+function shrinkVideo(f, onProgress, { fit = true } = {}) {
   let cancelled = false;
   let cleanup = () => {};
   const done = (async () => {
@@ -105,7 +107,7 @@ function shrinkVideo(f, onProgress) {
       v.onerror = () => rej(new Error('this video can’t be played in the browser. Try an MP4 (H.264) or WebM.'));
     });
     const d = v.duration;
-    const scale = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight));
+    const scale = Math.min(1, (fit ? 1280 : 1920) / Math.max(v.videoWidth, v.videoHeight));
     const c = document.createElement('canvas');
     c.width = Math.round((v.videoWidth * scale) / 2) * 2;
     c.height = Math.round((v.videoHeight * scale) / 2) * 2;
@@ -117,7 +119,10 @@ function shrinkVideo(f, onProgress) {
       src?.getAudioTracks().forEach((t) => stream.addTrack(t));
     } catch { /* silent video is fine */ }
     const hasAudio = stream.getAudioTracks().length > 0;
-    const videoBits = Math.max(350000, Math.min(4000000, (TARGET_MB * 8e6 * 0.92) / d - (hasAudio ? AUDIO : 0)));
+    // "fit": aim for TARGET_MB. Otherwise: good quality, at most about half the original's data rate.
+    const videoBits = fit
+      ? Math.max(350000, Math.min(4000000, (TARGET_MB * 8e6 * 0.92) / d - (hasAudio ? AUDIO : 0)))
+      : Math.max(800000, Math.min(6000000, ((f.size * 8) / d) * 0.5));
     const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: videoBits, audioBitsPerSecond: AUDIO });
     const chunks = [];
     rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
@@ -149,13 +154,21 @@ shrinkGo.addEventListener('click', async () => {
   shrinkGo.disabled = true;
   shrinkBar.hidden = false;
   shrinkFill.style.width = '0%';
-  shrinkText.textContent = 'Shrinking… keep this tab in front.';
+  const fit = needsShrink;
+  shrinkText.textContent = fit ? 'Shrinking… keep this tab in front.' : 'Converting to WebM… keep this tab in front.';
   vpreview.pause();
-  shrinking = shrinkVideo(big, (p) => { shrinkFill.style.width = `${(p * 100).toFixed(1)}%`; });
+  shrinking = shrinkVideo(big, (p) => { shrinkFill.style.width = `${(p * 100).toFixed(1)}%`; }, { fit });
   try {
     const small = await shrinking.done;
     if (file !== big) return;                       // a different file was chosen meanwhile
-    if (small.size > MAX_VIDEO_MB * 1e6) throw new Error(`it only got down to ${mb(small.size)} MB. Trim the video shorter and try again.`);
+    if (fit && small.size > MAX_VIDEO_MB * 1e6) throw new Error(`it only got down to ${mb(small.size)} MB. Trim the video shorter and try again.`);
+    if (!fit && small.size >= big.size * 0.95) {
+      shrinkText.textContent = `This video is already compact (WebM came out at ${mb(small.size)} MB), so the original is kept.`;
+      shrinkBar.hidden = true;
+      shrinkGo.hidden = true;
+      vpreview.play?.().catch(() => {});
+      return;
+    }
     original = big;
     file = small;
     needsShrink = false;
@@ -163,7 +176,7 @@ shrinkGo.addEventListener('click', async () => {
     previewUrl = URL.createObjectURL(small);
     vpreview.src = previewUrl;
     vpreview.play?.().catch(() => {});
-    shrinkText.textContent = `Shrunk from ${mb(big.size)} MB to ${mb(small.size)} MB. Check the preview, then light up the panel.`;
+    shrinkText.textContent = `${fit ? 'Shrunk' : 'Converted to WebM:'} from ${mb(big.size)} MB to ${mb(small.size)} MB. Check the preview, then light up the panel.`;
     shrinkBar.hidden = true;
     shrinkGo.hidden = true;
     submit.disabled = false;
@@ -181,14 +194,28 @@ function setFile(f) {
   if (!f) return;
   const video = isVideo(f);
   if (!video && !f.type.startsWith('image/')) { showErr(errFile, 'That isn’t an image or a video.'); return; }
+  if (video && R2_ON && f.size > MAX_BUCKET_MB * 1e6) {
+    showErr(errFile, `That video is ${mb(f.size)} MB. The most one video can be is ${MAX_BUCKET_MB} MB.`);
+    return;
+  }
   file = f;
   original = null;
-  needsShrink = video && f.size > MAX_VIDEO_MB * 1e6;
-  shrinkBox.hidden = !needsShrink;
+  needsShrink = video && !R2_ON && f.size > MAX_VIDEO_MB * 1e6;   // with a video bucket, videos go up at full size
+  // any other video can optionally be converted to WebM (usually much smaller); already-WebM files are left alone
+  const optional = video && !needsShrink && !/webm/i.test(f.type + f.name);
+  shrinkBox.hidden = !(needsShrink || optional);
   shrinkBar.hidden = true;
   shrinkGo.hidden = false;
   shrinkGo.disabled = false;
+  shrinkGo.textContent = needsShrink ? 'Shrink to fit' : 'Convert to WebM';
   submit.disabled = needsShrink;
+  if (optional) {
+    shrinkText.textContent = `Optional: convert this ${mb(f.size)} MB video to WebM, a lighter web format.`;
+    probeDuration(f).then((d) => {
+      if (file !== f) return;
+      shrinkText.textContent = `Optional: convert this ${mb(f.size)} MB video to WebM, a lighter web format. It plays through once, so it takes about ${clock(d)}; keep this tab in front.`;
+    }).catch(() => {});
+  }
   if (needsShrink) {
     shrinkText.textContent = `This video is ${mb(f.size)} MB, over the ${MAX_VIDEO_MB} MB limit. Shrink it to fit?`;
     probeDuration(f).then((d) => {

@@ -75,6 +75,37 @@ Changes are kept in your browser as a draft (images too, so a reload won't lose 
   **Contents: Read and write**. The site updates about a minute later.
 - **Download JSON** gives you the updated `entries.json` (and any new images) to commit yourself.
 
+## Web-friendly formats
+
+- **Images** you add are converted to **WebP** automatically (and resized to at most 1600px). SVG and GIF files are kept
+  as they are, and an image that would come out bigger as WebP is left alone.
+- **Videos** get a **Convert to WebM** button in the Add dialog. It's optional: it re-records the video in your browser
+  (it plays through once), usually much smaller. If it wouldn't save anything, the original is kept.
+
+## Big videos (optional): Cloudflare R2
+
+Videos normally live in this repo, which limits them to 25 MB. To add full-size videos (up to 1 GB each), connect a
+Cloudflare R2 bucket. Stills, frames and everything else still save to GitHub.
+
+1. Create a free Cloudflare account, open **R2 Object Storage** and enable it (it asks for a payment card; the first
+   10 GB are free).
+2. **Create bucket**, e.g. `design-orbit`.
+3. In the bucket's **Settings**:
+   - **Public access → Public Development URL → Enable**. Copy the address (looks like `https://pub-xxxx.r2.dev`).
+   - **CORS policy → Add**, and paste:
+     ```json
+     [{ "AllowedOrigins": ["https://arthur1005.github.io"],
+        "AllowedMethods": ["GET", "HEAD", "PUT"],
+        "AllowedHeaders": ["*"],
+        "MaxAgeSeconds": 3600 }]
+     ```
+4. Back on the R2 overview: **Manage API tokens → Create Account API token**, permission **Object Read & Write**,
+   limited to this bucket. Copy the **Access Key ID** and **Secret Access Key** (shown once). Keep these private.
+5. Put the **account ID** (shown on the R2 overview), the **bucket name** and the **public address** into `config.js`.
+
+The first time you save a video, the site asks for the Access Key ID and Secret Access Key and keeps them in that
+browser only. The save bar shows upload progress.
+
 ## Visitor comments (optional)
 
 Visitors can leave a comment on any panel, with their name if they like. Comments only show once you approve them.
@@ -141,7 +172,8 @@ store.js            drafts, image uploads, Save to GitHub / Download
 keywords.js         floating keyword chips, search, spelling suggestions
 details.js          links, similar projects, comments
 comments.js         visitor comments + approval (Supabase, optional)
-config.js           where the two Supabase values go
+config.js           settings for visitor comments (Supabase) and big videos (R2)
+r2.js               uploads videos to the R2 bucket
 supabase/setup.sql  one-time database setup for visitor comments
 related.js          related-panel suggestions
 lightbox.js         full-screen image viewer
