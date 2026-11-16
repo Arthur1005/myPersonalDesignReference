@@ -1213,3 +1213,12 @@ body.gated .help, body.panel-open .help { visibility: hidden; }
 .add-usage { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #9a6200; background: #fff8e8; border: 1px solid #d9a441; }
 .add-usage.full { color: #c0392b; background: #fdf1ef; border-color: #c0392b; }
 @media (max-width: 600px) { .savebar { left: 12px; bottom: 60px; } .usage-pop { width: min(320px, calc(100vw - 28px)); } }
+
+/* ---------- replace a panel's image / video (owner) ---------- */
+.p-replace {
+  position: absolute; right: 12px; bottom: 22px; z-index: 2;
+  align-items: center; padding: 6px 14px; border-radius: 999px; border: 0;
+  font: inherit; font-size: 12px; color: #fff; background: rgba(20, 20, 20, 0.72); cursor: pointer;
+}
+.p-replace:hover { background: var(--accent); }
+.add-dialog.replacing .add-row, .add-dialog.replacing .add-note-field, .add-dialog.replacing .add-hint, .add-dialog.replacing #add-err-name { display: none; }

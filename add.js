@@ -3,7 +3,7 @@
  *  The panel appears on the globe straight away and is saved to the repo
  *  with everything else when you press "Save to GitHub".
  * ------------------------------------------------------------------ */
-import { editMode, createEntry, whenReady } from './store.js';
+import { editMode, createEntry, replaceMedia, whenReady } from './store.js';
 import { R2_ON } from './r2.js';
 
 const $ = (id) => document.getElementById(id);
@@ -273,8 +273,14 @@ function reset() {
   submit.textContent = 'Light up a panel';
 }
 
-function open() {
+let replacing = null;     // the panel whose image/video is being swapped, or null when adding a new one
+
+function open(entry = null) {
   reset();
+  replacing = entry;
+  dialog.classList.toggle('replacing', !!entry);
+  $('add-title').textContent = entry ? 'Replace image or video' : 'Add today’s inspiration';
+  submit.textContent = entry ? 'Replace' : 'Light up a panel';
   dialog.hidden = scrim.hidden = false;
   document.body.classList.add('adding');
   requestAnimationFrame(() => drop.focus?.());
@@ -284,7 +290,11 @@ function close() {
   document.body.classList.remove('adding');
 }
 
-openBtn.addEventListener('click', open);
+openBtn.addEventListener('click', () => open());
+$('p-replace').addEventListener('click', () => {
+  const st = window.orbit.state;
+  if (st.current >= 0) open(st.entries[st.current]);
+});
 $('add-close').addEventListener('click', close);
 $('add-cancel').addEventListener('click', close);
 scrim.addEventListener('click', close);
@@ -308,7 +318,7 @@ dialog.addEventListener('submit', async (e) => {
   e.preventDefault();
   let ok = true;
   if (!file) { showErr(errFile, 'Choose an image or video first.'); ok = false; }
-  if (!nameInput.value.trim()) {
+  if (!replacing && !nameInput.value.trim()) {
     showErr(errName, 'Give it a title.');
     nameInput.setAttribute('aria-invalid', 'true');
     if (ok) nameInput.focus();
@@ -321,21 +331,17 @@ dialog.addEventListener('submit', async (e) => {
     const video = isVideo(file) ? file : null;
     if (video) submit.textContent = 'Picking frames from the video…';
     const stills = video ? await stillsFrom(original || video) : null;
-    const index = await createEntry({
-      file: stills ? stills.poster : file,
-      video,
-      frames: stills?.frames,
-      title: nameInput.value,
-      date: dateInput.value || localISO(),
-      note: noteInput.value,
-    });
+    const media = { file: stills ? stills.poster : file, video, frames: stills?.frames };
+    const index = replacing
+      ? await replaceMedia(replacing, media)
+      : await createEntry({ ...media, title: nameInput.value, date: dateInput.value || localISO(), note: noteInput.value });
     close();
     // open the new panel so keywords / links can be added right away
     setTimeout(() => window.orbit.openEntry(index), 250);
   } catch (err) {
-    showErr(errFile, `Couldn’t add it: ${err.message}`);
+    showErr(errFile, `Couldn’t ${replacing ? 'replace' : 'add'} it: ${err.message}`);
     submit.disabled = false;
-    submit.textContent = 'Light up a panel';
+    submit.textContent = replacing ? 'Replace' : 'Light up a panel';
   }
 });
 

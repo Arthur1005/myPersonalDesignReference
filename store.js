@@ -194,6 +194,27 @@ export async function createEntry({ file, video, frames, title, date, note }) {
   return index;
 }
 
+/** Swap a panel's image or video for a new one (old files stay in the repo / bucket, unused). */
+export async function replaceMedia(entry, { file, video, frames }) {
+  const date = entry.date;
+  // anything being replaced that was never uploaded doesn't need uploading any more
+  for (const old of [entry.image, entry.video, ...(entry.frames || [])]) if (old && pending.has(old)) unstageUpload(old);
+  patch(entry, 'image', await stageUpload(file, { date }, ENTRY_DIR));
+  if (video) {
+    patch(entry, 'video', await stageUpload(video, { date }, ENTRY_DIR, { toBucket: R2_ON }));
+    patch(entry, 'videoBytes', video.size);
+    const paths = [];
+    for (const f of frames || []) paths.push(await stageUpload(f, { date }, `${ENTRY_DIR}/frames`));
+    patch(entry, 'frames', paths);
+  } else if (entry.video) {
+    patch(entry, 'video', null);
+    patch(entry, 'videoBytes', null);
+    patch(entry, 'frames', null);
+  }
+  window.orbit.refreshPanels();
+  return entries.indexOf(entry);
+}
+
 /* ---------- ready: apply drafts before anyone renders ---------- */
 let entries = [];
 let ready = false;
@@ -248,7 +269,7 @@ function cleanEntry(e) {
   if (src.links?.length) delete src.link;
   for (const k of [...FIELD_ORDER, ...Object.keys(src).filter((k) => !FIELD_ORDER.includes(k))]) {
     const v = src[k];
-    if (v === undefined || v === '' || (Array.isArray(v) && !v.length)) continue;
+    if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) continue;
     out[k] = v;
   }
   return out;

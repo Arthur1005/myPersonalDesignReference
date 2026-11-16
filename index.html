@@ -80,7 +80,7 @@
       </label>
     </div>
     <p class="form-error" id="add-err-name" hidden></p>
-    <label class="add-field">
+    <label class="add-field add-note-field">
       <span>Why it inspired you <em>(optional)</em></span>
       <textarea id="add-note" rows="3" maxlength="1000" placeholder="What caught your eye?"></textarea>
     </label>
@@ -122,6 +122,7 @@
     <figure>
       <img id="p-image" alt="" />
       <video id="p-video" playsinline loop muted preload="metadata" hidden></video>
+      <button type="button" class="p-replace edit-only" id="p-replace">Replace</button>
       <div class="vid-ui" id="vid-ui" hidden>
         <span class="vid-state" id="vid-state" aria-live="polite">Paused · click to play</span>
         <button type="button" class="vid-btn" id="vid-magnify" title="Magnify this frame" aria-label="Magnify this frame">

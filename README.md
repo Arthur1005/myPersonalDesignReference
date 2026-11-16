@@ -60,6 +60,8 @@ lives in your own browser. Without it, nobody can save anything.
 
 Open any lit panel. Under the image:
 
+- **Replace** (on the image or video): swap the panel's image or video for another. Its title, keywords, links and
+  comments stay as they are. The old file stays in the repo or bucket, unused.
 - **Keywords**: they float in their container. Type in the search box to add more: suggestions come from
   `data/keywords.json` (~300 design terms) plus keywords you've used before, and misspellings get a "did you mean?"
   correction first. `↑`/`↓` + `Enter` to add, `×` to remove (hover a keyword to stop it moving).
