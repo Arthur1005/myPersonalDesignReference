@@ -416,6 +416,7 @@ function buildNet(entryCount) {
 }
 
 const loader = new THREE.TextureLoader();
+const FRAME_MS = 900;        // how long each still of a video panel shows on the globe
 
 /* ---------- main colours of an image (tiny k-means in Lab space) ---------- */
 function toLab([r, g, b]) {
@@ -472,14 +473,29 @@ function addPanel(entry, dayIndex, { stagger = true } = {}) {
   panelGroup.add(frame);
   mesh.userData.frame = frame;
 
-  loader.load(resolveImage(entry.image), (tex) => {
+  // "cover" fit: crop the image to the panel's proportions, centred
+  const fit = (tex) => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    // "cover" fit: crop the image to the panel's proportions, centred
     const ia = tex.image.width / tex.image.height;
     const pa = cell.aspect * (1 - 2 * PANEL_GAP);
     if (ia > pa) { tex.repeat.set(pa / ia, 1); tex.offset.set((1 - pa / ia) / 2, 0); }
     else { tex.repeat.set(1, ia / pa); tex.offset.set(0, (1 - ia / pa) / 2); }
+    return tex;
+  };
+
+  // video panels: the globe flips through a few small stills; the clip itself only loads in the card
+  if (entry.frames?.length) {
+    const frames = (mesh.userData.frames = []);
+    entry.frames.forEach((path, i) => {
+      loader.load(resolveImage(path), (tex) => { frames[i] = fit(tex); });
+    });
+    mesh.userData.frameOffset = Math.random() * FRAME_MS;   // so video panels don't all flip together
+  }
+
+  loader.load(resolveImage(entry.image), (tex) => {
+    fit(tex);
+    mesh.userData.still = tex;
     mat.map = tex;
     try {
       const pal = palette(tex.image);
@@ -502,6 +518,8 @@ function disposeGroup(group) {
     o.geometry?.dispose();
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of mats) { m?.map?.dispose(); m?.dispose(); }
+    o.userData?.still?.dispose();
+    for (const f of o.userData?.frames || []) f?.dispose();
   }
 }
 
@@ -606,7 +624,7 @@ function setHover(faceId, x, y, mouse = true) {
     let html = '';
     if (dayIndex !== undefined) {
       const e = state.entries[dayIndex];
-      html = `<span class="d">${String(dayIndex + 1).padStart(3, '0')}</span>${escapeHTML(e.title)}<small>Click to open</small>`;
+      html = `<span class="d">${String(dayIndex + 1).padStart(3, '0')}</span>${escapeHTML(e.title)}<small>${e.video ? '▶ Video · click to play' : 'Click to open'}</small>`;
     } else if (mouse) {
       html = following
         ? '<span class="dot"></span>Following your cursor<small>Click to release</small>'
@@ -677,6 +695,19 @@ function openEntry(dayIndex, { fly = true } = {}) {
   const e = state.entries[dayIndex];
   if (!e) return;
   state.current = dayIndex;
+  // a video panel plays in the card; its still frame is what the globe shows
+  const vid = el('p-video');
+  el('p-image').hidden = !!e.video;
+  vid.hidden = !e.video;
+  el('vid-ui').hidden = !e.video;
+  if (e.video) {
+    const src = resolveImage(e.video);
+    if (vid.dataset.src !== src) { vid.dataset.src = src; vid.poster = resolveImage(e.image); vid.src = src; }
+    vid.muted = true;
+    vid.play().catch(() => {});
+  } else if (vid.dataset.src) {
+    vid.pause(); vid.removeAttribute('src'); vid.removeAttribute('poster'); delete vid.dataset.src; vid.load();
+  }
   el('p-image').src = resolveImage(e.image);
   el('p-image').alt = e.title;
   el('p-day').textContent = `Day ${String(dayIndex + 1).padStart(3, '0')} · ${formatDate(e.date)}`;
@@ -699,6 +730,7 @@ function closePanel() {
   if (!panel.classList.contains('open')) return;
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
+  el('p-video').pause();
   document.body.classList.remove('panel-open');
   state.current = -1;
   state.panelMeshes.forEach((m) => { m.userData.focus = false; });
@@ -781,6 +813,14 @@ function tick() {
   if (state.nodeMat) state.nodeMat.uniforms.uTime.value = t;
 
   for (const m of state.panelMeshes) {
+    const fr = m.userData.frames;
+    if (fr && m.userData.still) {
+      const ready = fr.filter(Boolean);
+      if (ready.length) {
+        const next = ready[Math.floor((now + m.userData.frameOffset) / FRAME_MS) % ready.length];
+        if (m.material.map !== next) { m.material.map = next; m.material.needsUpdate = true; }
+      }
+    }
     const age = Math.max(0, (now - m.userData.born) / 900);
     const hl = state.highlight;
     const lit = hl && hl.size && hl.has(m.userData.dayIndex);
@@ -884,4 +924,38 @@ boot();
     };
     setTimeout(show, 1200);
   }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Video in the card: loops forever; click to pause / play.
+ *  While paused you can magnify the frame, or drag the bar to another moment.
+ * ------------------------------------------------------------------ */
+{
+  const vid = document.getElementById('p-video');
+  const ui = document.getElementById('vid-ui');
+  const bar = document.getElementById('vid-bar');
+  const fill = document.getElementById('vid-fill');
+  const sound = document.getElementById('vid-sound');
+  const sync = () => ui.classList.toggle('paused', vid.paused);
+  vid.addEventListener('click', () => { if (vid.paused) vid.play().catch(() => {}); else vid.pause(); });
+  vid.addEventListener('play', sync);
+  vid.addEventListener('pause', sync);
+  vid.addEventListener('timeupdate', () => { fill.style.width = `${(vid.currentTime / (vid.duration || 1)) * 100}%`; });
+  sound.addEventListener('click', () => {
+    vid.muted = !vid.muted;
+    sound.textContent = vid.muted ? 'Sound off' : 'Sound on';
+    sound.setAttribute('aria-pressed', String(!vid.muted));
+  });
+  window.addEventListener('orbit:open', () => { sound.textContent = 'Sound off'; sound.setAttribute('aria-pressed', 'false'); sync(); });
+  const seek = (e) => {
+    const r = bar.getBoundingClientRect();
+    vid.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * (vid.duration || 0);
+  };
+  bar.addEventListener('pointerdown', (e) => { bar.setPointerCapture(e.pointerId); seek(e); });
+  bar.addEventListener('pointermove', (e) => { if (e.buttons) seek(e); });
+  bar.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.stopPropagation();
+    vid.currentTime = Math.min(vid.duration || 0, Math.max(0, vid.currentTime + (e.key === 'ArrowRight' ? 1 : -1)));
+  });
 }

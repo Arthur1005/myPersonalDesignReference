@@ -105,6 +105,8 @@ const slug = (s) => s.toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-
 /** Shrink big photos before they go into the repo. */
 async function prepareImage(file) {
   if (/svg|gif/.test(file.type)) return { blob: file, ext: file.type.includes('svg') ? 'svg' : 'gif' };
+  // videos (and anything that isn't an image) are stored as they are
+  if (!file.type.startsWith('image/')) return { blob: file, ext: (file.name.split('.').pop() || 'bin').toLowerCase() };
   try {
     const bmp = await createImageBitmap(file);
     const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
@@ -166,12 +168,17 @@ async function restorePending() {
 
 /* ---------- new panels ---------- */
 /** Create a new entry from an image on the device. Returns its index on the globe. */
-export async function createEntry({ file, title, date, note }) {
+export async function createEntry({ file, video, frames, title, date, note }) {
   let t = title.trim();
   const taken = (x) => entries.some((e) => entryKey(e) === `${date}|${x}`);
   for (let n = 2; taken(t); n++) t = `${title.trim()} (${n})`;
   const image = await stageUpload(file, { date }, ENTRY_DIR);
   const entry = { date, title: t, image };
+  if (video) {
+    entry.video = await stageUpload(video, { date }, ENTRY_DIR);            // `image` is the video's still frame
+    entry.frames = [];
+    for (const f of frames || []) entry.frames.push(await stageUpload(f, { date }, `${ENTRY_DIR}/frames`));
+  }
   if (note && note.trim()) entry.note = note.trim();
   added.push({ ...entry });
   saveAdded();
@@ -221,12 +228,12 @@ function updateSavebar(message) {
   const parts = [];
   if (a) parts.push(`${a} new panel${a === 1 ? '' : 's'}`);
   if (n) parts.push(`${n} panel${n === 1 ? '' : 's'} changed`);
-  if (u) parts.push(`${u} image${u === 1 ? '' : 's'} to upload`);
+  if (u) parts.push(`${u} file${u === 1 ? '' : 's'} to upload`);
   statusEl.textContent = `Unsaved: ${parts.join(', ')}`;
 }
 
 /* ---------- export ---------- */
-const FIELD_ORDER = ['date', 'title', 'image', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
+const FIELD_ORDER = ['date', 'title', 'image', 'video', 'frames', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
 function cleanEntry(e) {
   const out = {};
   const src = { ...e };
@@ -303,13 +310,14 @@ saveBtn.addEventListener('click', async () => {
   try {
     // 1. images first, so entries.json never points at a missing file
     let i = 0;
+    const total = pending.size;
     for (const [path, { blob }] of [...pending]) {
-      updateSavebar(`Uploading image ${++i} of ${pending.size}…`);
+      updateSavebar(`Uploading file ${++i} of ${total}…${blob.size > 8e6 ? ' (large, may take a minute)' : ''}`);
       const bytes = new Uint8Array(await blob.arrayBuffer());
       await gh(`${api}/${path}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `Add image ${path.split('/').pop()}`, content: bytesToB64(bytes), branch }),
+        body: JSON.stringify({ message: `Add ${/\.(mp4|webm|mov|m4v)$/i.test(path) ? 'video' : 'image'} ${path.split('/').pop()}`, content: bytesToB64(bytes), branch }),
       }, headers);
       // keep showing the local copy until the site redeploys, but it's no longer "pending"
       pending.delete(path);

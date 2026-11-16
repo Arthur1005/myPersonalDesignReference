@@ -107,3 +107,20 @@ $('similar').addEventListener('click', (e) => {
   e.preventDefault();
   openLightbox(panelItems(), Number(a.dataset.view) + 1);
 });
+
+// video: pause and magnify the frame that's showing
+$('vid-magnify').addEventListener('click', () => {
+  const v = $('p-video');
+  if (!v.videoWidth) return;
+  v.pause();
+  const c = document.createElement('canvas');
+  c.width = v.videoWidth;
+  c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0);
+  c.toBlob((blob) => {
+    if (!blob) return;
+    const st = window.orbit.state;
+    const t = Math.floor(v.currentTime);
+    openLightbox([{ src: URL.createObjectURL(blob), caption: `${st.entries[st.current]?.title || ''}  ·  frame at ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` }], 0);
+  }, 'image/jpeg', 0.92);
+});

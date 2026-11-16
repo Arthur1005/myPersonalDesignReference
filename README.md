@@ -11,6 +11,11 @@ Choose, drop or paste an image, give it a title (the date defaults to today) and
 projects and comments. Press **Save to GitHub** when you're done: the image goes into `entries/` and the entry into
 `data/entries.json`. The live site updates about a minute later (until then, a reload may not show it yet).
 
+**Videos:** in **+ Add** you can also choose a short video (MP4 or WebM, up to 25 MB; videos live in this repo, so keep
+them light). The site takes one still for the card and lists, plus four small frames that the globe flips through. The
+clip itself only loads when the panel is opened: it loops, a click pauses or plays it, the bar at the bottom scrubs, and
+**Magnify** opens the current frame under the magnifying glass.
+
 **By hand:** put the image in `entries/` and add an entry to `data/entries.json`:
 
    ```json
