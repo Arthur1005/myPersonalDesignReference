@@ -50,8 +50,13 @@
       <input type="file" id="add-file" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" />
       <img id="add-preview" alt="" hidden />
       <video id="add-vpreview" muted loop playsinline hidden></video>
-      <span class="add-drop-text" id="add-drop-text"><b>Choose an image or video</b><small>or drop it here · images, or MP4 / WebM up to 25 MB</small></span>
+      <span class="add-drop-text" id="add-drop-text"><b>Choose an image or video</b><small>or drop it here · images or video (bigger videos can be shrunk to fit)</small></span>
     </label>
+    <div class="add-shrink" id="add-shrink" hidden>
+      <p id="shrink-text"></p>
+      <div class="shrink-bar" id="shrink-bar" hidden><i id="shrink-fill"></i></div>
+      <button type="button" id="shrink-go">Shrink to fit</button>
+    </div>
     <p class="form-error" id="add-err-file" hidden></p>
     <div class="add-row">
       <label class="add-field add-grow">

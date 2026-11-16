@@ -1144,3 +1144,12 @@ body.gated .help, body.panel-open .help { visibility: hidden; }
 .vid-bar::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, 0.25); transition: height 0.15s; }
 .vid-bar i { position: absolute; left: 0; bottom: 0; height: 4px; width: 0; background: var(--accent); transition: height 0.15s; }
 .vid-bar:hover::before, .vid-bar:hover i { height: 8px; }
+
+/* ---------- shrink-to-fit step for big videos ---------- */
+.add-shrink { margin-top: 10px; padding: 12px 14px; border: 1px solid rgba(42, 107, 255, 0.35); border-radius: 10px; background: rgba(42, 107, 255, 0.05); display: grid; gap: 10px; }
+.add-shrink[hidden], .shrink-bar[hidden], #shrink-go[hidden] { display: none; }
+.add-shrink p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+.shrink-bar { height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.08); overflow: hidden; }
+.shrink-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s linear; }
+#shrink-go { justify-self: start; font: inherit; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); cursor: pointer; }
+#shrink-go:disabled { opacity: 0.5; cursor: default; }

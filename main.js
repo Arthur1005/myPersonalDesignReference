@@ -940,7 +940,17 @@ boot();
   vid.addEventListener('click', () => { if (vid.paused) vid.play().catch(() => {}); else vid.pause(); });
   vid.addEventListener('play', sync);
   vid.addEventListener('pause', sync);
-  vid.addEventListener('timeupdate', () => { fill.style.width = `${(vid.currentTime / (vid.duration || 1)) * 100}%`; });
+  // videos shrunk in the browser don't carry their length; this makes the browser work it out
+  vid.addEventListener('loadedmetadata', () => {
+    if (vid.duration !== Infinity) return;
+    const back = () => { vid.removeEventListener('durationchange', back); vid.currentTime = 0; };
+    vid.addEventListener('durationchange', back);
+    vid.currentTime = 1e9;
+  });
+  vid.addEventListener('timeupdate', () => {
+    const d = Number.isFinite(vid.duration) ? vid.duration : 0;
+    fill.style.width = d ? `${(vid.currentTime / d) * 100}%` : '0%';
+  });
   sound.addEventListener('click', () => {
     vid.muted = !vid.muted;
     sound.textContent = vid.muted ? 'Sound off' : 'Sound on';
@@ -949,7 +959,7 @@ boot();
   window.addEventListener('orbit:open', () => { sound.textContent = 'Sound off'; sound.setAttribute('aria-pressed', 'false'); sync(); });
   const seek = (e) => {
     const r = bar.getBoundingClientRect();
-    vid.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * (vid.duration || 0);
+    if (Number.isFinite(vid.duration)) vid.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * vid.duration;
   };
   bar.addEventListener('pointerdown', (e) => { bar.setPointerCapture(e.pointerId); seek(e); });
   bar.addEventListener('pointermove', (e) => { if (e.buttons) seek(e); });

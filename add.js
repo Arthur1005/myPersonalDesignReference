@@ -21,11 +21,23 @@ const errName = $('add-err-name');
 const submit = $('add-submit');
 
 let file = null;
+let original = null;      // the full-size video, kept for sharp stills after shrinking
+let needsShrink = false;
 let previewUrl = null;
 
 const localISO = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+const shrinkBox = $('add-shrink');
+const shrinkText = $('shrink-text');
+const shrinkBar = $('shrink-bar');
+const shrinkFill = $('shrink-fill');
+const shrinkGo = $('shrink-go');
+let shrinking = null;
+const mb = (bytes) => (bytes / 1e6).toFixed(bytes < 1e7 ? 1 : 0);
+const clock = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+const TARGET_MB = 20;            // aim a little under the limit
+const MAX_SHRINK_SECONDS = 300;  // longer than this would look too rough at 20 MB
 const MAX_VIDEO_MB = 25;   // videos live in the GitHub repo, so keep them short and light
 const isVideo = (f) => f.type.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(f.name);
 
@@ -62,15 +74,133 @@ async function stillsFrom(f) {
   }
 }
 
+function probeDuration(f) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(f);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.onloadedmetadata = () => { URL.revokeObjectURL(url); res(v.duration); };
+    v.onerror = () => { URL.revokeObjectURL(url); rej(new Error('unreadable')); };
+    v.src = url;
+  });
+}
+
+/**
+ * Re-record a video smaller, in the browser: it plays through once onto a canvas (max 1280px)
+ * and is recorded at a bitrate chosen so the result lands around TARGET_MB.
+ */
+function shrinkVideo(f, onProgress) {
+  let cancelled = false;
+  let cleanup = () => {};
+  const done = (async () => {
+    if (!window.MediaRecorder) throw new Error('this browser can’t shrink videos. Try Chrome, or export the video smaller.');
+    const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']
+      .find((m) => MediaRecorder.isTypeSupported(m));
+    if (!mime) throw new Error('this browser can’t shrink videos. Try Chrome, or export the video smaller.');
+    const url = URL.createObjectURL(f);
+    const v = document.createElement('video');
+    v.playsInline = true; v.preload = 'auto'; v.src = url;
+    await new Promise((res, rej) => {
+      v.onloadeddata = res;
+      v.onerror = () => rej(new Error('this video can’t be played in the browser. Try an MP4 (H.264) or WebM.'));
+    });
+    const d = v.duration;
+    const scale = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round((v.videoWidth * scale) / 2) * 2;
+    c.height = Math.round((v.videoHeight * scale) / 2) * 2;
+    const ctx = c.getContext('2d');
+    const stream = c.captureStream(30);
+    const AUDIO = 96000;
+    try {   // keep the sound if the browser lets us tap it
+      const src = (v.captureStream || v.mozCaptureStream)?.call(v);
+      src?.getAudioTracks().forEach((t) => stream.addTrack(t));
+    } catch { /* silent video is fine */ }
+    const hasAudio = stream.getAudioTracks().length > 0;
+    const videoBits = Math.max(350000, Math.min(4000000, (TARGET_MB * 8e6 * 0.92) / d - (hasAudio ? AUDIO : 0)));
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: videoBits, audioBitsPerSecond: AUDIO });
+    const chunks = [];
+    rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    const stopped = new Promise((res) => { rec.onstop = res; });
+    let raf = 0;
+    const draw = () => {
+      ctx.drawImage(v, 0, 0, c.width, c.height);
+      onProgress?.(Math.min(1, v.currentTime / d));
+      if (!v.ended && !cancelled) raf = requestAnimationFrame(draw);
+    };
+    cleanup = () => { cancelAnimationFrame(raf); v.pause(); if (rec.state !== 'inactive') rec.stop(); URL.revokeObjectURL(url); };
+    v.muted = !hasAudio;
+    rec.start(1000);
+    try { await v.play(); } catch { v.muted = true; await v.play(); }
+    draw();
+    await new Promise((res) => { v.onended = res; const t = setInterval(() => { if (cancelled) { clearInterval(t); res(); } }, 200); });
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    cleanup();
+    await stopped;
+    if (cancelled) throw new Error('cancelled');
+    const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+    return new File(chunks, f.name.replace(/\.[^.]+$/, '') + `.${ext}`, { type: mime.split(';')[0] });
+  })();
+  return { done, cancel: () => { cancelled = true; cleanup(); } };
+}
+
+shrinkGo.addEventListener('click', async () => {
+  const big = file;
+  shrinkGo.disabled = true;
+  shrinkBar.hidden = false;
+  shrinkFill.style.width = '0%';
+  shrinkText.textContent = 'Shrinking… keep this tab in front.';
+  vpreview.pause();
+  shrinking = shrinkVideo(big, (p) => { shrinkFill.style.width = `${(p * 100).toFixed(1)}%`; });
+  try {
+    const small = await shrinking.done;
+    if (file !== big) return;                       // a different file was chosen meanwhile
+    if (small.size > MAX_VIDEO_MB * 1e6) throw new Error(`it only got down to ${mb(small.size)} MB. Trim the video shorter and try again.`);
+    original = big;
+    file = small;
+    needsShrink = false;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(small);
+    vpreview.src = previewUrl;
+    vpreview.play?.().catch(() => {});
+    shrinkText.textContent = `Shrunk from ${mb(big.size)} MB to ${mb(small.size)} MB. Check the preview, then light up the panel.`;
+    shrinkBar.hidden = true;
+    shrinkGo.hidden = true;
+    submit.disabled = false;
+  } catch (err) {
+    if (err.message === 'cancelled') return;
+    shrinkText.textContent = `Couldn’t shrink it: ${err.message}`;
+    shrinkBar.hidden = true;
+    shrinkGo.disabled = false;
+  } finally {
+    shrinking = null;
+  }
+});
+
 function setFile(f) {
   if (!f) return;
   const video = isVideo(f);
   if (!video && !f.type.startsWith('image/')) { showErr(errFile, 'That isn’t an image or a video.'); return; }
-  if (video && f.size > MAX_VIDEO_MB * 1e6) {
-    showErr(errFile, `That video is ${(f.size / 1e6).toFixed(0)} MB. Keep videos under ${MAX_VIDEO_MB} MB (a short clip, or export it smaller).`);
-    return;
-  }
   file = f;
+  original = null;
+  needsShrink = video && f.size > MAX_VIDEO_MB * 1e6;
+  shrinkBox.hidden = !needsShrink;
+  shrinkBar.hidden = true;
+  shrinkGo.hidden = false;
+  shrinkGo.disabled = false;
+  submit.disabled = needsShrink;
+  if (needsShrink) {
+    shrinkText.textContent = `This video is ${mb(f.size)} MB, over the ${MAX_VIDEO_MB} MB limit. Shrink it to fit?`;
+    probeDuration(f).then((d) => {
+      if (file !== f || !needsShrink) return;
+      if (d > MAX_SHRINK_SECONDS) {
+        shrinkText.textContent = `This video is ${mb(f.size)} MB and ${clock(d)} long. That's too long to shrink well; trim it to under ${clock(MAX_SHRINK_SECONDS)} first.`;
+        shrinkGo.hidden = true;
+      } else {
+        shrinkText.textContent = `This video is ${mb(f.size)} MB, over the ${MAX_VIDEO_MB} MB limit. Shrinking plays it through once, so it takes about ${clock(d)}. Keep this tab in front while it runs.`;
+      }
+    }).catch(() => {});
+  }
   errFile.hidden = true;
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = URL.createObjectURL(f);
@@ -91,6 +221,10 @@ function showErr(el, msg) { el.textContent = msg; el.hidden = false; }
 
 function reset() {
   file = null;
+  original = null;
+  needsShrink = false;
+  shrinking?.cancel();
+  shrinkBox.hidden = true;
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = null;
   preview.hidden = true;
@@ -99,7 +233,7 @@ function reset() {
   vpreview.removeAttribute('src');
   vpreview.load?.();
   drop.classList.remove('has-image');
-  $('add-drop-text').innerHTML = '<b>Choose an image or video</b><small>or drop it here · images, or MP4 / WebM up to 25 MB</small>';
+  $('add-drop-text').innerHTML = '<b>Choose an image or video</b><small>or drop it here · images or video (bigger videos can be shrunk to fit)</small>';
   nameInput.value = '';
   noteInput.value = '';
   dateInput.value = localISO();
@@ -157,7 +291,7 @@ dialog.addEventListener('submit', async (e) => {
   try {
     const video = isVideo(file) ? file : null;
     if (video) submit.textContent = 'Picking frames from the video…';
-    const stills = video ? await stillsFrom(video) : null;
+    const stills = video ? await stillsFrom(original || video) : null;
     const index = await createEntry({
       file: stills ? stills.poster : file,
       video,
