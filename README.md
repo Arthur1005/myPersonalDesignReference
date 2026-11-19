@@ -62,7 +62,7 @@ Open any lit panel. Under the image:
 
 - **Credit**: under the title, add who made it (and a link to their portfolio or source). Visitors see "By …".
   You can also fill this in when adding a panel.
-- **Copy image** (on the image, for everyone): copies the picture to the clipboard in one click, ready to paste into
+- **Copy image** (on the image, owner only): copies the picture to the clipboard in one click, ready to paste into
   Figma, a doc or a chat. On a video it copies the frame that's showing; SVG logos are copied at 1600px.
 - **Paste from clipboard** (in **+ Add** and **Replace**): one click drops in whatever image you last copied.
 - **Replace** (on the image or video): swap the panel's image or video for another. Its title, keywords, links and
