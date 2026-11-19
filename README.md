@@ -203,3 +203,7 @@ entries/            images (entries/frames/ for video stills)
 vendor/             Three.js r170 (MIT), vendored so there's no CDN dependency
 fonts/              Orbitron (logo), Octarine (titles), Organo (keywords), see fonts/README.md
 ```
+
+## Updating files
+
+`tools/stamp.py` gives every script and the stylesheet a version tag in `index.html` (the git pre-commit hook runs it). Each device then always loads one matching set of files, and an old cached page reloads itself to the current one. If you edit files by hand, run `python3 tools/stamp.py` before committing.

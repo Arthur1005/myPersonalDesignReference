@@ -867,6 +867,7 @@ function adaptResolution(now) {
 let prevTick = performance.now();
 function tick() {
   const now = performance.now();
+  fitCanvas();   // cheap check every frame: catches any size change a device forgets to announce
   const dt = Math.min(0.1, (now - prevTick) / 1000);   // seconds since last frame (capped after a tab switch)
   prevTick = now;
   adaptResolution(now);
@@ -905,10 +906,11 @@ function tick() {
 }
 
 /** Match the drawing to the canvas's real size on screen. */
+const fitSize = new THREE.Vector2();
 function fitCanvas() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (!w || !h) return;
-  const size = renderer.getSize(new THREE.Vector2());
+  const size = renderer.getSize(fitSize);
   if (size.x === w && size.y === h) return;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();

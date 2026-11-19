@@ -6,12 +6,42 @@
   <title>Design Orbit — a daily design reference</title>
   <meta name="description" content="One piece of design inspiration a day, stitched into a net around the globe." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27none%27 stroke=%27%236ff3ff%27 stroke-width=%272%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%276%27 fill=%27%232a6bff%27/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css" />
+  <meta name="build" content="01e61163c3" />
+  <script>
+    /* If this page is an old cached copy, load the current one (once). Keeps every file
+       on the same version, so a half-updated mix can't show up on any device. */
+    (function () {
+      var mine = document.querySelector('meta[name=build]').content;
+      fetch('version.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (v) {
+        if (!v.build || v.build === mine) return;
+        var u = new URL(location.href);
+        if (u.searchParams.get('b') === v.build) return;          // already tried this one
+        u.searchParams.set('b', v.build);
+        location.replace(u.toString());
+      }).catch(function () {});
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css?v=67ba6771" />
   <script type="importmap">
     {
       "imports": {
-        "three": "./vendor/three.module.min.js",
-        "three/addons/OrbitControls.js": "./vendor/OrbitControls.js"
+        "three": "./vendor/three.module.min.js?v=512c8b83",
+        "three/addons/OrbitControls.js": "./vendor/OrbitControls.js?v=339028c2",
+        "./add.js": "./add.js?v=1fe673bf",
+        "./ask.js": "./ask.js?v=b8b78e3f",
+        "./calendar.js": "./calendar.js?v=e2559ab3",
+        "./comments.js": "./comments.js?v=3d64e806",
+        "./config.js": "./config.js?v=44b49c06",
+        "./cursor.js": "./cursor.js?v=3fdb9b63",
+        "./details.js": "./details.js?v=b9431dd4",
+        "./gate.js": "./gate.js?v=4ab23ba1",
+        "./keywords.js": "./keywords.js?v=2571ee82",
+        "./lightbox.js": "./lightbox.js?v=f59bb12f",
+        "./main.js": "./main.js?v=679f03c5",
+        "./r2.js": "./r2.js?v=c9f68e38",
+        "./related.js": "./related.js?v=8bb49e5e",
+        "./storage.js": "./storage.js?v=b2e0e914",
+        "./store.js": "./store.js?v=aacfc15d"
       }
     }
   </script>
@@ -284,16 +314,16 @@
     <button type="button" class="lb-btn lb-next" id="lb-next" aria-label="Next image"><svg class="ic" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </div>
 
-  <script type="module" src="gate.js"></script>
-  <script type="module" src="main.js"></script>
-  <script type="module" src="keywords.js"></script>
-  <script type="module" src="details.js"></script>
-  <script type="module" src="comments.js"></script>
-  <script type="module" src="add.js"></script>
-  <script type="module" src="storage.js"></script>
-  <script type="module" src="related.js"></script>
-  <script type="module" src="lightbox.js"></script>
-  <script type="module" src="cursor.js"></script>
-  <script type="module" src="calendar.js"></script>
+  <script type="module" src="gate.js?v=4ab23ba1"></script>
+  <script type="module" src="main.js?v=679f03c5"></script>
+  <script type="module" src="keywords.js?v=2571ee82"></script>
+  <script type="module" src="details.js?v=b9431dd4"></script>
+  <script type="module" src="comments.js?v=3d64e806"></script>
+  <script type="module" src="add.js?v=1fe673bf"></script>
+  <script type="module" src="storage.js?v=b2e0e914"></script>
+  <script type="module" src="related.js?v=8bb49e5e"></script>
+  <script type="module" src="lightbox.js?v=f59bb12f"></script>
+  <script type="module" src="cursor.js?v=3fdb9b63"></script>
+  <script type="module" src="calendar.js?v=e2559ab3"></script>
 </body>
 </html>

@@ -44,7 +44,6 @@ body { background: transparent; }
   inset: 0;
   width: 100%;
   height: 100%;
-  height: 100lvh;   /* the full screen, even while the browser bars or keyboard take some of it */
   display: block;
   cursor: grab;
 }
