@@ -165,9 +165,8 @@ The site will appear at `https://<username>.github.io/myPersonalDesignReference/
 
 ## Interactions
 
-**Cursor styles:** the **?** pop-up has a Cursor switch: **Reticle** (ring + dot), **Satellite** (a dot with a satellite
-circling it), **Viewfinder** (corner brackets) or **Classic** (the normal pointer). Each reacts over a lit panel, in follow
-mode and while dragging. Your choice is remembered.
+**Cursor:** over the globe the cursor is a reticle (thin ring + blue dot); over a lit panel it becomes viewfinder
+brackets. In follow mode the ring is dashed and spins.
 
 The **?** button (bottom right) shows these hints; it opens by itself on a first visit.
 

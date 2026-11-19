@@ -1,23 +1,17 @@
 /* ------------------------------------------------------------------ *
- *  Custom cursors for the globe (mouse only). Three styles to compare:
- *   reticle    – thin ring + blue centre dot
- *   satellite  – a dot with a small satellite circling it
- *   viewfinder – four corner brackets
- *   classic    – the normal system cursor
- *  Each reacts to: a lit panel under it, follow mode, and dragging.
- *  Over buttons, cards and text the normal cursor comes back.
+ *  Globe cursor (mouse only): a reticle (thin ring + blue dot) that
+ *  becomes viewfinder brackets over a lit panel. Dashed and spinning in
+ *  follow mode; tightens while dragging. Over buttons, cards and text
+ *  the normal cursor comes back.
+ *  (The satellite and plain viewfinder styles are still in style.css.)
  * ------------------------------------------------------------------ */
-const STYLES = ['reticle', 'satellite', 'viewfinder', 'classic'];
-const KEY = 'designOrbit.cursor';
 const fine = window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 
 const canvas = document.getElementById('scene');
 const el = document.getElementById('cursor');
 const ring = el.querySelector('.c-ring');
-const switcher = document.getElementById('cursor-switch');
 
-let style = 'reticle';
-try { const s = localStorage.getItem(KEY); if (STYLES.includes(s)) style = s; } catch { /* ignore */ }
+const style = 'combo';
 
 let x = -100, y = -100;      // pointer
 let rx = -100, ry = -100;    // ring/brackets, eased behind the pointer
@@ -27,8 +21,6 @@ let raf = 0;
 function apply() {
   el.dataset.style = style;
   document.body.classList.toggle('custom-cursor', fine && style !== 'classic');
-  switcher?.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cursor === style)));
-  try { localStorage.setItem(KEY, style); } catch { /* ignore */ }
 }
 
 function frame() {
@@ -65,15 +57,6 @@ if (fine) {
   });
   mo.observe(canvas, { attributes: true, attributeFilter: ['class'] });
   mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-} else if (switcher) {
-  switcher.hidden = true;
 }
-
-switcher?.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-cursor]');
-  if (!b) return;
-  style = b.dataset.cursor;
-  apply();
-});
 
 apply();
