@@ -7,8 +7,8 @@ The net is made of bands of rectangular windows, like a geodesic dome of screens
 
 **From the site (owner):** unlock with the lock icon (bottom left), then press **+ Add** (top right).
 Choose, drop or paste an image, give it a title (the date defaults to today) and optionally a note, and press
-**Light up a panel**. The panel appears on the globe straight away and opens so you can add keywords, links, similar
-projects and comments. Press **Save to GitHub** when you're done: the image goes into `entries/` and the entry into
+**Light up a panel**. The panel appears on the globe straight away and opens so you can add keywords, links
+and comments. Press **Save to GitHub** when you're done: the image goes into `entries/` and the entry into
 `data/entries.json`. The live site updates about a minute later (until then, a reload may not show it yet).
 
 **Videos:** in **+ Add** you can also choose a video. Videos live in this repo, so the limit is 25 MB; a bigger one (up
@@ -31,7 +31,7 @@ clip itself only loads when the panel is opened: it loops, a click pauses or pla
    ```
 
 Entries are sorted by `date`, so the order in the file doesn't matter. Everything after `image` is optional, and
-`similar` / `comments` are easiest to add from the site itself.
+`comments` are easiest to add from the site itself.
 The net starts with ~300 panels (10° bands) and automatically adds bands when you outgrow it (378, then 458, …). Images are cropped to fill their window, centred, and always stay upright.
 
 The three `sample` entries are placeholders. Delete them (and their SVGs in `entries/`) once you've added your own.
@@ -51,7 +51,7 @@ lives in your own browser. Without it, nobody can save anything.
 ## In each panel
 
 - **Click the image to enlarge it.** In the viewer the cursor becomes a magnifying glass that enlarges just the spot
-  under it (scroll to make it stronger or weaker); `←`/`→` step through the panel's images (main + similar projects),
+  under it (scroll to make it stronger or weaker); `←`/`→` step through the panel's images ,
   `Esc` closes.
 - **Related on your globe** suggests up to four other panels, ranked by shared keywords (rarer ones count more), links
   to the same website, and similar colours (read from each image). Each suggestion shows why; click to fly to it.
@@ -71,8 +71,6 @@ Open any lit panel. Under the image:
   `data/keywords.json` (~300 design terms) plus keywords you've used before, and misspellings get a "did you mean?"
   correction first. `↑`/`↓` + `Enter` to add, `×` to remove (hover a keyword to stop it moving).
 - **Links**: paste a link, tag it **Website**, **Image** or **Source**. As many as you like.
-- **Similar projects**: **+ Add from your device** (or drag images in). Big photos are resized to 1600px and saved as WebP
-  into `entries/similar/`. Each gets an editable caption.
 - **Comments**: dated notes on the panel (`⌘/Ctrl + Enter` to post).
 
 Changes are kept in your browser as a draft (images too, so a reload won't lose them) until you save:
@@ -184,7 +182,7 @@ main.js             the globe (Three.js)
 gate.js             welcome panel + owner login (lock icon)
 store.js            drafts, image uploads, Save to GitHub / Download
 keywords.js         floating keyword chips, search, spelling suggestions
-details.js          links, similar projects, comments
+details.js          credit, links, comments
 comments.js         visitor comments + approval (Supabase, optional)
 config.js           settings for visitor comments (Supabase) and big videos (R2)
 r2.js               uploads videos to the R2 bucket
@@ -196,7 +194,7 @@ add.js              “+ Add” dialog for new panels
 calendar.js         progress calendar and streaks
 data/entries.json   your archive
 data/keywords.json  vocabulary for keyword suggestions
-entries/            images (entries/similar/ for similar projects)
+entries/            images (entries/frames/ for video stills)
 vendor/             Three.js r170 (MIT), vendored so there's no CDN dependency
 fonts/              Orbitron (logo), Octarine (titles), Organo (keywords), see fonts/README.md
 ```

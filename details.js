@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ *
- *  Card details: links, similar projects (images from your device),
+ *  Card details: credit, links
  *  and comments. Visible to everyone; editable by the owner (PIN).
  * ------------------------------------------------------------------ */
-import { editMode, patch, whenReady, esc, srcFor, isPending, stageUpload, unstageUpload } from './store.js';
+import { editMode, patch, whenReady, esc } from './store.js';
 
 const $ = (id) => document.getElementById(id);
 let entries = [];
@@ -74,62 +74,6 @@ $('links').addEventListener('click', (ev) => {
   const links = linksOf(e).filter((_, i) => i !== Number(b.dataset.delLink));
   patch(e, 'links', links);
   renderLinks();
-});
-
-/* ---------- similar projects ---------- */
-function renderSimilar() {
-  const e = entry();
-  const items = e.similar || [];
-  $('similar').innerHTML = items.map((s, i) => `
-    <li>
-      <a href="${esc(srcFor(s.image))}" data-view="${i}" target="_blank" rel="noopener" title="${esc(s.caption || 'Enlarge')}">
-        <img src="${esc(srcFor(s.image))}" alt="${esc(s.caption || 'Similar project')}" loading="lazy" />
-      </a>
-      ${editMode && isPending(s.image) ? '<span class="badge">not uploaded</span>' : ''}
-      ${editMode
-        ? `<input class="cap" data-cap="${i}" value="${esc(s.caption || '')}" placeholder="Caption" maxlength="80" />
-           <button type="button" class="x" data-del-sim="${i}" aria-label="Remove image">×</button>`
-        : (s.caption ? `<span class="cap">${esc(s.caption)}</span>` : '')}
-    </li>`).join('');
-  show('similar-sec', items.length > 0);
-}
-
-async function addFiles(files) {
-  const e = entry();
-  if (!e) return;
-  const imgs = [...files].filter((f) => f.type.startsWith('image/'));
-  if (!imgs.length) return;
-  const added = [];
-  for (const f of imgs) {
-    const path = await stageUpload(f, e);
-    added.push({ image: path, caption: f.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').slice(0, 80) });
-  }
-  patch(e, 'similar', [...(e.similar || []), ...added]);
-  renderSimilar();
-}
-
-$('similar-file').addEventListener('change', (ev) => { addFiles(ev.target.files); ev.target.value = ''; });
-const drop = $('similar-drop');
-['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (ev) => { ev.preventDefault(); drop.classList.add('over'); }));
-['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, () => drop.classList.remove('over')));
-drop.addEventListener('drop', (ev) => { ev.preventDefault(); addFiles(ev.dataTransfer.files); });
-
-$('similar').addEventListener('click', (ev) => {
-  const b = ev.target.closest('[data-del-sim]');
-  if (!b) return;
-  const e = entry();
-  const i = Number(b.dataset.delSim);
-  const gone = e.similar[i];
-  if (gone && isPending(gone.image)) unstageUpload(gone.image);
-  patch(e, 'similar', e.similar.filter((_, j) => j !== i));
-  renderSimilar();
-});
-$('similar').addEventListener('change', (ev) => {
-  const inp = ev.target.closest('[data-cap]');
-  if (!inp) return;
-  const e = entry();
-  const items = e.similar.map((s, j) => (j === Number(inp.dataset.cap) ? { ...s, caption: inp.value.trim() } : s));
-  patch(e, 'similar', items);
 });
 
 /* ---------- comments ---------- */
@@ -226,7 +170,6 @@ function renderAll() {
   $('link-error').hidden = true;
   renderCredit();
   renderLinks();
-  renderSimilar();
   renderComments();
 }
 whenReady((list) => {

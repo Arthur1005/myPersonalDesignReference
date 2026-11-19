@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ *
- *  Enlarge images: click the card image or a similar-project image.
+ *  Enlarge images: click the card image.
  *  In the viewer the cursor becomes a magnifying glass that enlarges only
  *  the spot under it (scroll to change how strong it is).
  *  ← → to step through this panel's images, Esc to close.
@@ -19,21 +19,34 @@ let lastFocus = null;
 
 const resolve = (p) => (window.orbit?.resolveImage ? window.orbit.resolveImage(p) : p);
 
-/** Images of the open panel: the main image, then its similar projects. */
+/** Images of the open panel. */
 function panelItems() {
   const st = window.orbit?.state;
   const e = st && st.entries[st.current];
   if (!e) return [];
   return [
     { src: resolve(e.image), caption: e.title },
-    ...(e.similar || []).map((s) => ({ src: resolve(s.image), caption: s.caption || 'Similar project' })),
   ];
 }
+
+/** Fit the image inside the viewer at its own proportions. Small photos grow up to 2x; SVGs grow freely. */
+function fitImage() {
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  if (!nw || !nh) return;
+  const sw = stage.clientWidth, sh = stage.clientHeight;
+  const vector = /\.svg(\?|$)/i.test(img.currentSrc || img.src);
+  const k = Math.min(sw / nw, sh / nh, vector ? Infinity : 2);
+  img.style.width = `${Math.floor(nw * k)}px`;
+  img.style.height = `${Math.floor(nh * k)}px`;
+}
+img.addEventListener('load', fitImage);
+window.addEventListener('resize', () => { if (!box.hidden) fitImage(); });
 
 function show() {
   const it = items[index];
   if (!it) return;
   loupe.hidden = true;
+  img.style.width = img.style.height = '';
   img.src = it.src;
   img.alt = it.caption || '';
   caption.textContent = items.length > 1 ? `${it.caption || ''}  ·  ${index + 1} / ${items.length}` : (it.caption || '');
@@ -101,12 +114,6 @@ const cardImg = $('p-image');
 cardImg.addEventListener('click', () => openLightbox(panelItems(), 0));
 cardImg.title = 'Click to enlarge';
 
-$('similar').addEventListener('click', (e) => {
-  const a = e.target.closest('[data-view]');
-  if (!a) return;
-  e.preventDefault();
-  openLightbox(panelItems(), Number(a.dataset.view) + 1);
-});
 
 // video: pause and magnify the frame that's showing
 $('vid-magnify').addEventListener('click', () => {

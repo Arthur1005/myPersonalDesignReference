@@ -744,9 +744,10 @@ body.gated .core-switch, body.panel-open .core-switch { visibility: hidden; }
   overflow: hidden;
 }
 .lb-stage img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  /* exact size is set in lightbox.js so the whole image fits at its true ratio */
+  max-width: none;
+  max-height: none;
+  flex-shrink: 0;
   cursor: none;            /* the lens is the cursor */
   touch-action: none;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
@@ -1045,7 +1046,15 @@ body.gated .topbar { visibility: hidden; }
 }
 .add-link:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42, 107, 255, 0.12); }
 .add-link select, .add-link input { border: 0; border-radius: 0; background: none; padding: 0 12px; }
-.add-link select { border-right: 1px solid var(--line); color: var(--ink-2); padding-right: 6px; cursor: pointer; }
+.add-link select {
+  -webkit-appearance: none; appearance: none;
+  border-right: 1px solid var(--line); color: var(--ink); font-size: 13px; cursor: pointer;
+  padding: 0 34px 0 14px; line-height: 40px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a8a85' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 13px center / 10px 6px;
+  transition: background-color 0.15s;
+}
+.add-link select:hover { background-color: var(--field); }
+.add-link select:focus-visible { outline: none; background-color: rgba(42, 107, 255, 0.06); }
 .add-link button { border: 0; border-radius: 0; padding: 0 18px; font-size: 13px; font-weight: 500; }
 .form-error { margin: 8px 2px 0; }
 
