@@ -997,7 +997,6 @@ body.gated .topbar { visibility: hidden; }
   .owner { left: 14px; bottom: 14px; }
   .savebar { left: 58px; right: 12px; bottom: 12px; flex-wrap: wrap; }
   .core-switch { right: 50%; transform: translateX(50%); bottom: 44px; }
-  .calendar { top: auto; bottom: 12px; right: 12px; left: 12px; width: auto; max-height: 70vh; }
   .panel .meta { overflow: visible; }
 }
 
@@ -1347,3 +1346,65 @@ body.custom-cursor #scene, body.custom-cursor #scene.pointer, body.custom-cursor
 .cursor-switch button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink-2); cursor: pointer; }
 .cursor-switch button:hover { border-color: var(--ink); color: var(--ink); }
 .cursor-switch button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* ================================================================== *
+ *  Round icon buttons: icons drawn as SVG and centred exactly
+ *  (iOS adds its own padding to buttons, which pushed glyphs off-centre)
+ * ================================================================== */
+.lock-btn, .help-btn, .cal-nav, .cal-close, .panel .close, .add-dialog .close, .lb-btn, .x {
+  display: inline-grid; place-items: center; padding: 0; line-height: 1;
+  -webkit-appearance: none; appearance: none; font-size: 0;
+}
+.lock-btn svg, .help-btn svg, .cal-nav svg, .cal-close svg, .panel .close svg, .add-dialog .close svg, .lb-btn svg { display: block; }
+.x { font-size: 14px; }
+.lb-btn svg { width: 18px; height: 18px; }
+.help-btn { font-size: 0; }
+.cal-grid .day { padding: 0; -webkit-appearance: none; appearance: none; }
+.cal-grid .day .count { display: grid; place-items: center; line-height: 1; padding: 0 4px; }
+.media-btn, .vid-btn, .usage-btn, .cal-toggle, .add-open, .gate-enter { -webkit-appearance: none; appearance: none; }
+
+/* ---------- calendar position: always just under its button ---------- */
+.calendar { top: var(--cal-top, 76px); max-height: calc(100vh - var(--cal-top, 76px) - 24px); }
+.cal-note, .cal-go { display: none; }
+
+/* ---------- phones: compact calendar on top, the picked day's project along the bottom ---------- */
+@media (max-width: 600px) {
+  .calendar {
+    left: 12px; right: 12px; width: auto; padding: 12px 14px 12px;
+    max-height: calc(100dvh - var(--cal-top, 76px) - 210px);
+    animation: fade-in 0.25s ease;          /* no slide: keeps the bottom card pinned to the screen */
+  }
+  .cal-head { margin-bottom: 8px; }
+  .cal-head h2 { font-size: 16px; }
+  .cal-nav, .cal-close { width: 30px; height: 30px; }
+  .cal-hero { margin: 0 2px 6px; gap: 12px; }
+  .cal-hero-num b { font-size: 34px; }
+  .cal-sub { margin-bottom: 8px; padding-bottom: 8px; font-size: 11.5px; }
+  .cal-grid { gap: 3px; }
+  .cal-grid .wd { font-size: 9.5px; padding-bottom: 2px; }
+  .cal-grid .day { aspect-ratio: auto; height: 34px; border-radius: 7px; font-size: 12px; }
+  .cal-legend { display: none; }
+
+  .cal-day {
+    position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 13;
+    margin: 0; padding: 14px; max-height: 196px; overflow-y: auto;
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.12);
+    animation: sheet-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes sheet-in { from { opacity: 0; transform: translateY(16px); } }
+  .cal-day h3 { margin-bottom: 10px; }
+  .cal-entries { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 2px; }
+  .cal-entries li { flex: 0 0 100%; scroll-snap-align: start; }
+  .cal-entries li:only-child { flex-basis: 100%; }
+  .cal-entries:has(li + li) li { flex-basis: 86%; }
+  .cal-entries button { align-items: stretch; gap: 12px; padding: 8px; border-radius: 12px; height: 128px; }
+  .cal-entries img { width: 128px; height: 100%; border-radius: 8px; }
+  .cal-entries button > span { display: flex; flex-direction: column; min-width: 0; flex: 1; padding: 2px 0; }
+  .cal-entries b { font-family: var(--font-title); font-size: 15px; font-weight: 700; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .cal-entries small { margin-top: 3px; }
+  .cal-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 6px; font-style: normal; font-size: 12px; line-height: 1.4; color: var(--ink-2); }
+  .cal-go { display: inline-block; margin-top: auto; align-self: flex-start; font-style: normal; font-size: 12px; font-weight: 500; color: var(--accent); }
+  .cal-go::after { content: " →"; }
+  body.cal-open .owner, body.cal-open .help, body.cal-open .savebar { visibility: hidden; }
+}

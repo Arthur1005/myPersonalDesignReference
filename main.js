@@ -593,25 +593,12 @@ function addEntry(entry) {
 /* ------------------------------------------------------------------ *
  *  Core style switch
  * ------------------------------------------------------------------ */
-const coreSwitch = document.getElementById('core-switch');
-let coreMode = 'frosted';
-try {
-  const q = new URLSearchParams(location.search).get('core');
-  const saved = localStorage.getItem('designOrbit.core');
-  coreMode = CORE_MODES.includes(q) ? q : CORE_MODES.includes(saved) ? saved : 'frosted';
-} catch { /* keep default */ }
-
-function setCoreMode(mode) {
-  coreMode = mode;
-  core.body.material = mode === 'planet' ? core.solid : core.frost;
-  core.dots.visible = mode === 'planet';
-  coreSwitch.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.core === mode)));
-  try { localStorage.setItem('designOrbit.core', mode); } catch { /* ignore */ }
+// the core is always frosted glass: the far side of the net shows faintly through it
+const coreMode = 'frosted';
+function setCoreMode() {
+  core.body.material = core.frost;
+  core.dots.visible = false;
 }
-coreSwitch.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-core]');
-  if (b) setCoreMode(b.dataset.core);
-});
 
 /* ------------------------------------------------------------------ *
  *  Interaction

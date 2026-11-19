@@ -144,7 +144,8 @@ The **Calendar** button (top right) shows your current streak and opens a month 
 - **Today**: outlined until you add something; it never counts as missed while the day is still going
 
 Hover a day to light up its panels on the globe; click it to turn the globe to them and list that day's entries
-(click one to open it). Stats show current streak, best streak, days done / days tracked, and total entries.
+(click one to open it). On phones the calendar sits under its button and the picked day's projects appear as cards
+along the bottom of the screen. Stats show current streak, best streak, days done / days tracked, and total entries.
 Dates come from each entry's `date` field, so add entries with the day you actually found them. Link straight to it with `?calendar`.
 
 ## Run locally
@@ -168,7 +169,7 @@ The site will appear at `https://<username>.github.io/myPersonalDesignReference/
 **Cursor:** over the globe the cursor is a reticle (thin ring + blue dot); over a lit panel it becomes viewfinder
 brackets. In follow mode the ring is dashed and spins.
 
-The **?** button (bottom right) shows these hints; it opens by itself on a first visit.
+The core is frosted glass, so the far side of the net shows faintly through it. The **?** button (bottom right) shows these hints; it opens by itself on a first visit.
 
 - Drag to turn, scroll to zoom. Or click once on the globe (not on a lit panel) and it follows your cursor; click again
   (or press `Esc`) to release. A hint beside the cursor says what a click will do

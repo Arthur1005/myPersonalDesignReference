@@ -118,11 +118,15 @@ function renderDay() {
   const st = statusOf(selected);
   let body;
   if (idx.length) {
-    body = `<ul class="cal-entries">${idx.map((i) => `
+    body = `<ul class="cal-entries">${idx.map((i) => {
+      const e = entries[i];
+      const by = e.author ? `By ${esc(e.author)}` : `Panel ${String(i + 1).padStart(3, '0')}`;
+      return `
       <li><button type="button" data-entry="${i}">
-        <img src="${esc((window.orbit.resolveImage || ((x) => x))(entries[i].image))}" alt="" loading="lazy" />
-        <span><b>${esc(entries[i].title)}</b><small>Panel ${String(i + 1).padStart(3, '0')}</small></span>
-      </button></li>`).join('')}</ul>`;
+        <img src="${esc((window.orbit.resolveImage || ((x) => x))(e.image))}" alt="" loading="lazy" />
+        <span><b>${esc(e.title)}</b><small>${by}</small>${e.note ? `<em class="cal-note">${esc(e.note)}</em>` : ''}<i class="cal-go">Open</i></span>
+      </button></li>`;
+    }).join('')}</ul>`;
   } else if (st === 'today') {
     body = '<p class="cal-empty">Nothing yet today — still time.</p>';
   } else if (st === 'missed') {
@@ -169,7 +173,15 @@ $('cal-trail').addEventListener('click', (e) => {
 $('cal-prev').addEventListener('click', () => { view = view.m === 0 ? { y: view.y - 1, m: 11 } : { y: view.y, m: view.m - 1 }; render(); });
 $('cal-next').addEventListener('click', () => { view = view.m === 11 ? { y: view.y + 1, m: 0 } : { y: view.y, m: view.m + 1 }; render(); });
 
+// sit just under the button that opens it (its height changes when + Add / Comments show)
+function place() {
+  const top = document.querySelector('.topbar').getBoundingClientRect().bottom + 10;
+  cal.style.setProperty('--cal-top', `${Math.round(top)}px`);
+}
+window.addEventListener('resize', () => { if (!cal.hidden) place(); });
+
 function open() {
+  place();
   cal.hidden = false;
   toggle.setAttribute('aria-expanded', 'true');
   document.body.classList.add('cal-open');
