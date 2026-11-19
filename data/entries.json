@@ -15,11 +15,7 @@
       "date": "2026-11-13",
       "title": "Sample — Radial gradient study",
       "image": "entries/2026-11-13-sample.svg",
-      "note": "Placeholder entry. Soft gradients with thin concentric rings.",
-      "keywords": [
-        "sample",
-        "colour"
-      ]
+      "note": "Placeholder entry. Soft gradients with thin concentric rings."
     },
     {
       "date": "2026-11-14",
@@ -71,6 +67,7 @@
         "entries/frames/2026-11-16-screen-recording-2026-11-16-at-5-30-29-p-7gd7a.webp",
         "entries/frames/2026-11-16-screen-recording-2026-11-16-at-5-30-29-p-rc5y6.webp"
       ],
+      "author": "Royden So",
       "links": [
         {
           "type": "website",
