@@ -95,7 +95,7 @@ function render() {
   const img = (p) => (window.orbit.resolveImage ? window.orbit.resolveImage(p) : p);
   $('related').innerHTML = ranked.map((r) => {
     const why = r.reasons.map((x) => {
-      if (x.type === 'kw') return x.words.map((w) => `<span class="why kw">${esc(w)}</span>`).join('');
+      if (x.type === 'kw') return x.words.map((w) => `<span class="why why-kw">${esc(w)}</span>`).join('');
       if (x.type === 'site') return `<span class="why site">${esc(x.domains[0])}</span>`;
       return `<span class="why colour"><i style="background:${labToCss(x.pair.a)}"></i><i style="background:${labToCss(x.pair.b)}"></i>colours</span>`;
     }).join('');
