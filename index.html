@@ -68,6 +68,7 @@
       <div class="shrink-bar" id="shrink-bar" hidden><i id="shrink-fill"></i></div>
       <button type="button" id="shrink-go">Shrink to fit</button>
     </div>
+    <button type="button" class="paste-btn" id="add-paste">Paste from clipboard</button>
     <p class="form-error" id="add-err-file" hidden></p>
     <div class="add-row">
       <label class="add-field add-grow">
@@ -80,6 +81,16 @@
       </label>
     </div>
     <p class="form-error" id="add-err-name" hidden></p>
+    <div class="add-row add-credit-row">
+      <label class="add-field add-grow">
+        <span>Author / credit <em>(optional)</em></span>
+        <input id="add-author" type="text" maxlength="80" placeholder="Who made it?" autocomplete="off" />
+      </label>
+      <label class="add-field add-grow">
+        <span>Their link <em>(optional)</em></span>
+        <input id="add-author-url" type="text" inputmode="url" maxlength="300" placeholder="Portfolio, Behance, site…" autocomplete="off" />
+      </label>
+    </div>
     <label class="add-field add-note-field">
       <span>Why it inspired you <em>(optional)</em></span>
       <textarea id="add-note" rows="3" maxlength="1000" placeholder="What caught your eye?"></textarea>
@@ -122,7 +133,10 @@
     <figure>
       <img id="p-image" alt="" />
       <video id="p-video" playsinline loop muted preload="metadata" hidden></video>
-      <button type="button" class="p-replace edit-only" id="p-replace">Replace</button>
+      <div class="media-actions">
+        <button type="button" class="media-btn" id="p-copy" title="Copy this image so you can paste it anywhere">Copy image</button>
+        <button type="button" class="media-btn edit-only" id="p-replace">Replace</button>
+      </div>
       <div class="vid-ui" id="vid-ui" hidden>
         <span class="vid-state" id="vid-state" aria-live="polite">Paused · click to play</span>
         <button type="button" class="vid-btn" id="vid-magnify" title="Magnify this frame" aria-label="Magnify this frame">
@@ -136,6 +150,12 @@
     <div class="meta">
       <p class="day" id="p-day"></p>
       <h2 id="p-title"></h2>
+      <p class="credit" id="p-credit"></p>
+      <form class="credit-form edit-only" id="credit-form" novalidate>
+        <label><span>By</span><input id="credit-name" type="text" maxlength="80" placeholder="Author or studio (optional)" aria-label="Author" /></label>
+        <label><span>Link</span><input id="credit-url" type="text" inputmode="url" maxlength="300" placeholder="Their portfolio or source (optional)" aria-label="Author link" /></label>
+      </form>
+      <p class="credit-saved" id="credit-saved" aria-live="polite"></p>
       <p class="note" id="p-note"></p>
       <section class="kw" aria-label="Keywords">
         <h3>Keywords</h3>

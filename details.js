@@ -175,12 +175,56 @@ $('comments').addEventListener('click', (ev) => {
   renderComments();
 });
 
+/* ---------- author credit ---------- */
+function renderCredit() {
+  const e = entry();
+  const name = e.author || '';
+  const url = e.authorUrl || '';
+  const p = $('p-credit');
+  if (!name && !url) { p.hidden = true; p.innerHTML = ''; }
+  else {
+    p.hidden = false;
+    const label = esc(name || hostOf(url));
+    p.innerHTML = 'By ' + (url
+      ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${label} <span aria-hidden="true">↗</span></a>`
+      : `<span>${label}</span>`);
+  }
+  // owner edits it in place; hide the read-only line then
+  if (editMode) {
+    p.hidden = true;
+    $('credit-name').value = name;
+    $('credit-url').value = url;
+    $('credit-saved').textContent = '';
+  }
+}
+let creditTimer = 0;
+function saveCredit() {
+  const e = entry();
+  if (!e) return;
+  const name = $('credit-name').value.trim();
+  const raw = $('credit-url').value.trim();
+  const url = raw ? normaliseUrl(raw) : '';
+  if (raw && !url) { $('credit-saved').textContent = 'That link doesn’t look right'; return; }
+  if (name === (e.author || '') && url === (e.authorUrl || '')) return;
+  patch(e, 'author', name || null);
+  patch(e, 'authorUrl', url || null);
+  if (url && $('credit-url').value !== url) $('credit-url').value = url;
+  $('credit-saved').textContent = 'Saved as a draft';
+}
+for (const id of ['credit-name', 'credit-url']) {
+  $(id).addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Enter') { ev.preventDefault(); saveCredit(); ev.target.blur(); } });
+  $(id).addEventListener('input', () => { clearTimeout(creditTimer); $('credit-saved').textContent = ''; creditTimer = setTimeout(saveCredit, 900); });
+  $(id).addEventListener('blur', () => { clearTimeout(creditTimer); saveCredit(); });
+}
+$('credit-form').addEventListener('submit', (ev) => { ev.preventDefault(); saveCredit(); });
+
 /* ---------- wiring ---------- */
 for (const id of ['link-url', 'link-type']) $(id).addEventListener('keydown', (ev) => ev.stopPropagation());
 
 function renderAll() {
   if (!entry()) return;
   $('link-error').hidden = true;
+  renderCredit();
   renderLinks();
   renderSimilar();
   renderComments();

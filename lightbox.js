@@ -125,3 +125,53 @@ $('vid-magnify').addEventListener('click', () => {
     openLightbox([{ src: URL.createObjectURL(blob), caption: `${st.entries[st.current]?.title || ''}  ·  frame at ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` }], 0);
   }
 });
+
+/* ---------- one-click copy of the card's image (or the video's current frame) ---------- */
+/** Load an SVG at 1600px on its long side (many SVGs carry a tiny or missing size). */
+async function sizedSvg(url) {
+  const doc = new DOMParser().parseFromString(await (await fetch(url)).text(), 'image/svg+xml');
+  const svg = doc.documentElement;
+  const vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+  const w0 = parseFloat(svg.getAttribute('width')) || vb[2] || 300;
+  const h0 = parseFloat(svg.getAttribute('height')) || vb[3] || 150;
+  const k = 1600 / Math.max(w0, h0);
+  svg.setAttribute('width', Math.round(w0 * k));
+  svg.setAttribute('height', Math.round(h0 * k));
+  const blobUrl = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }));
+  const img = new Image();
+  img.src = blobUrl;
+  await img.decode();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  return img;
+}
+
+async function pngOf(source) {
+  const w = source.videoWidth || source.naturalWidth;
+  const h = source.videoHeight || source.naturalHeight;
+  const k = Math.min(1, 2400 / Math.max(w, h)) || 1;   // never bigger than 2400px
+  const c = document.createElement('canvas');
+  c.width = Math.round((w || 1200) * k);
+  c.height = Math.round((h || 900) * k);
+  c.getContext('2d').drawImage(source, 0, 0, c.width, c.height);
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('blank'))), 'image/png'));
+}
+$('p-copy').addEventListener('click', async () => {
+  const b = $('p-copy');
+  const v = $('p-video');
+  const say = (t) => { b.textContent = t; clearTimeout(b._t); b._t = setTimeout(() => { b.textContent = 'Copy image'; }, 1800); };
+  b.textContent = 'Copying…';
+  try {
+    let src = v.hidden ? $('p-image') : v;
+    const url = src.currentSrc || src.src || '';
+    if (src === $('p-image') && /\.svg(\?|$)/i.test(url)) src = await sizedSvg(url);   // logos: copy sharp, not tiny
+    // Safari only allows the write if it starts straight away, so it gets the image as a promise;
+    // other browsers get the finished image (some never settle when handed a promise)
+    const safari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+    const png = safari ? pngOf(src) : await pngOf(src);
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    say('Copied ✓');
+  } catch (err) {
+    console.warn('copy failed', err);
+    say('Couldn’t copy');
+  }
+});

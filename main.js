@@ -416,6 +416,48 @@ function buildNet(entryCount) {
 }
 
 const loader = new THREE.TextureLoader();
+
+/**
+ * SVGs (e.g. logos exported from Illustrator) often have no width/height, only a viewBox.
+ * Browsers can show those in a page but can't size them for WebGL, so draw them onto a
+ * canvas first: up to 1024px on the long side, on white so dark logos stay visible.
+ */
+async function svgTexture(url) {
+  const text = await (await fetch(url)).text();
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  const svg = doc.documentElement;
+  const vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+  let w = parseFloat(svg.getAttribute('width')) || vb[2] || 300;
+  let h = parseFloat(svg.getAttribute('height')) || vb[3] || 150;
+  const k = 1024 / Math.max(w, h);
+  w = Math.round(w * k); h = Math.round(h * k);
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  const blobUrl = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }));
+  try {
+    const img = new Image();
+    img.src = blobUrl;
+    await img.decode();
+    const c = document.createElement('canvas');
+    // a little white margin around the logo so it doesn't touch the panel edges
+    const pad = Math.round(Math.max(w, h) * 0.08);
+    c.width = w + pad * 2; c.height = h + pad * 2;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, pad, pad, w, h);
+    return new THREE.CanvasTexture(c);
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
+
+/** Load any panel image as a texture (SVGs via svgTexture). */
+function loadTexture(path, onLoad, onError) {
+  const url = resolveImage(path);
+  if (/\.svg(\?|$)/i.test(path)) svgTexture(url).then(onLoad, onError);
+  else loader.load(url, onLoad, undefined, onError);
+}
 const FRAME_MS = 900;        // how long each still of a video panel shows on the globe
 
 /* ---------- main colours of an image (tiny k-means in Lab space) ---------- */
@@ -488,12 +530,12 @@ function addPanel(entry, dayIndex, { stagger = true } = {}) {
   if (entry.frames?.length) {
     const frames = (mesh.userData.frames = []);
     entry.frames.forEach((path, i) => {
-      loader.load(resolveImage(path), (tex) => { frames[i] = fit(tex); });
+      loadTexture(path, (tex) => { frames[i] = fit(tex); });
     });
     mesh.userData.frameOffset = Math.random() * FRAME_MS;   // so video panels don't all flip together
   }
 
-  loader.load(resolveImage(entry.image), (tex) => {
+  loadTexture(entry.image, (tex) => {
     fit(tex);
     mesh.userData.still = tex;
     mat.map = tex;
@@ -502,7 +544,7 @@ function addPanel(entry, dayIndex, { stagger = true } = {}) {
       if (pal) { state.palettes.set(entry, pal); window.dispatchEvent(new CustomEvent('orbit:palette')); }
     } catch { /* cross-origin or odd format */ }
     mat.needsUpdate = true;
-  }, undefined, () => {
+  }, () => {
     mat.color.set(ACCENT); // no image: show a solid lit cell
   });
 }

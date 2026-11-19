@@ -265,6 +265,8 @@ function reset() {
   $('add-drop-text').innerHTML = '<b>Choose an image or video</b><small>or drop it here · images or video (bigger videos can be shrunk to fit)</small>';
   nameInput.value = '';
   noteInput.value = '';
+  $('add-author').value = '';
+  $('add-author-url').value = '';
   dateInput.value = localISO();
   dateInput.max = localISO();
   errFile.hidden = errName.hidden = true;
@@ -272,6 +274,31 @@ function reset() {
   submit.disabled = false;
   submit.textContent = 'Light up a panel';
 }
+
+function authorUrl() {
+  let raw = $('add-author-url').value.trim();
+  if (!raw) return '';
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(raw)) raw = 'https://' + raw;
+  try { const u = new URL(raw); return /^https?:$/.test(u.protocol) && u.hostname.includes('.') ? u.href : ''; } catch { return ''; }
+}
+
+// one-click paste: read an image straight from the clipboard
+$('add-paste').addEventListener('click', async () => {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const it of items) {
+      const type = it.types.find((t) => t.startsWith('image/') || t.startsWith('video/'));
+      if (!type) continue;
+      const blob = await it.getType(type);
+      setFile(new File([blob], `pasted-${localISO()}.${type.split('/')[1].replace('svg+xml', 'svg')}`, { type }));
+      return;
+    }
+    showErr(errFile, 'There’s no image on the clipboard. Copy an image first (right-click → Copy image).');
+  } catch {
+    showErr(errFile, 'This browser didn’t allow reading the clipboard. Press ⌘V / Ctrl+V in this dialog instead.');
+  }
+});
+for (const id of ['add-author', 'add-author-url']) $(id).addEventListener('input', () => { errName.hidden = true; });
 
 let replacing = null;     // the panel whose image/video is being swapped, or null when adding a new one
 
@@ -318,6 +345,10 @@ dialog.addEventListener('submit', async (e) => {
   e.preventDefault();
   let ok = true;
   if (!file) { showErr(errFile, 'Choose an image or video first.'); ok = false; }
+  if (!replacing && $('add-author-url').value.trim() && !authorUrl()) {
+    showErr(errName, 'The author link doesn’t look like a web address.');
+    ok = false;
+  }
   if (!replacing && !nameInput.value.trim()) {
     showErr(errName, 'Give it a title.');
     nameInput.setAttribute('aria-invalid', 'true');
@@ -334,7 +365,14 @@ dialog.addEventListener('submit', async (e) => {
     const media = { file: stills ? stills.poster : file, video, frames: stills?.frames };
     const index = replacing
       ? await replaceMedia(replacing, media)
-      : await createEntry({ ...media, title: nameInput.value, date: dateInput.value || localISO(), note: noteInput.value });
+      : await createEntry({
+        ...media,
+        title: nameInput.value,
+        date: dateInput.value || localISO(),
+        note: noteInput.value,
+        author: $('add-author').value,
+        authorUrl: authorUrl(),
+      });
     close();
     // open the new panel so keywords / links can be added right away
     setTimeout(() => window.orbit.openEntry(index), 250);

@@ -173,7 +173,7 @@ async function restorePending() {
 
 /* ---------- new panels ---------- */
 /** Create a new entry from an image on the device. Returns its index on the globe. */
-export async function createEntry({ file, video, frames, title, date, note }) {
+export async function createEntry({ file, video, frames, title, date, note, author, authorUrl }) {
   let t = title.trim();
   const taken = (x) => entries.some((e) => entryKey(e) === `${date}|${x}`);
   for (let n = 2; taken(t); n++) t = `${title.trim()} (${n})`;
@@ -185,6 +185,8 @@ export async function createEntry({ file, video, frames, title, date, note }) {
     entry.frames = [];
     for (const f of frames || []) entry.frames.push(await stageUpload(f, { date }, `${ENTRY_DIR}/frames`));
   }
+  if (author && author.trim()) entry.author = author.trim();
+  if (authorUrl) entry.authorUrl = authorUrl;
   if (note && note.trim()) entry.note = note.trim();
   added.push({ ...entry });
   saveAdded();
@@ -260,7 +262,7 @@ function updateSavebar(message) {
 }
 
 /* ---------- export ---------- */
-const FIELD_ORDER = ['date', 'title', 'image', 'video', 'videoBytes', 'frames', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
+const FIELD_ORDER = ['date', 'title', 'image', 'video', 'videoBytes', 'frames', 'author', 'authorUrl', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
 function cleanEntry(e) {
   const out = {};
   const src = { ...e };

@@ -1215,10 +1215,35 @@ body.gated .help, body.panel-open .help { visibility: hidden; }
 @media (max-width: 600px) { .savebar { left: 12px; bottom: 60px; } .usage-pop { width: min(320px, calc(100vw - 28px)); } }
 
 /* ---------- replace a panel's image / video (owner) ---------- */
-.p-replace {
-  position: absolute; right: 12px; bottom: 22px; z-index: 2;
+/* image / video actions: bottom-right of the media */
+.media-actions { position: absolute; right: 12px; bottom: 22px; z-index: 2; display: flex; gap: 6px; }
+.media-btn {
   align-items: center; padding: 6px 14px; border-radius: 999px; border: 0;
   font: inherit; font-size: 12px; color: #fff; background: rgba(20, 20, 20, 0.72); cursor: pointer;
+  transition: background-color 0.15s;
 }
-.p-replace:hover { background: var(--accent); }
+.media-btn:hover { background: var(--accent); }
 .add-dialog.replacing .add-row, .add-dialog.replacing .add-note-field, .add-dialog.replacing .add-hint, .add-dialog.replacing #add-err-name { display: none; }
+
+/* ---------- author credit ---------- */
+.credit { margin: 6px 0 0; font-size: 13px; color: var(--dim); }
+.credit[hidden] { display: none; }
+.credit a, .credit span { color: var(--ink-2); font-weight: 500; text-decoration: none; }
+.credit a:hover { color: var(--accent); }
+.credit a span { color: var(--dim); font-weight: 400; }
+.credit-form { flex-direction: column; margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+.credit-form:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42, 107, 255, 0.12); }
+.credit-form label { display: flex; align-items: center; height: 36px; }
+.credit-form label + label { border-top: 1px solid var(--line); }
+.credit-form label span { flex: 0 0 44px; padding-left: 12px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.credit-form input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; font: inherit; font-size: 13px; color: var(--ink); padding: 0 12px 0 4px; }
+.credit-saved { margin: 6px 2px 0; font-size: 11.5px; color: var(--accent); }
+.credit-saved:empty { display: none; }
+.add-credit-row { margin-top: 14px; }
+
+/* ---------- paste from clipboard ---------- */
+.paste-btn {
+  margin-top: 8px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line);
+  font: inherit; font-size: 12.5px; color: var(--ink); background: #fff; cursor: pointer;
+}
+.paste-btn:hover { border-color: var(--accent); color: var(--accent); }
