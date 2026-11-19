@@ -165,6 +165,10 @@ The site will appear at `https://<username>.github.io/myPersonalDesignReference/
 
 ## Interactions
 
+**Cursor styles:** the **?** pop-up has a Cursor switch: **Reticle** (ring + dot), **Satellite** (a dot with a satellite
+circling it), **Viewfinder** (corner brackets) or **Classic** (the normal pointer). Each reacts over a lit panel, in follow
+mode and while dragging. Your choice is remembered.
+
 The **?** button (bottom right) shows these hints; it opens by itself on a first visit.
 
 - Drag to turn, scroll to zoom. Or click once on the globe (not on a lit panel) and it follows your cursor; click again
@@ -190,6 +194,7 @@ storage.js          storage meter and limit warnings
 supabase/setup.sql  one-time database setup for visitor comments
 related.js          related-panel suggestions
 lightbox.js         full-screen image viewer
+cursor.js           custom globe cursors
 add.js              “+ Add” dialog for new panels
 calendar.js         progress calendar and streaks
 data/entries.json   your archive

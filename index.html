@@ -18,6 +18,10 @@
 </head>
 <body>
   <canvas id="scene"></canvas>
+  <div class="cursor" id="cursor" aria-hidden="true">
+    <span class="c-ring"><i class="c-orbit"></i><b></b><b></b><b></b><b></b></span>
+    <span class="c-dot"></span>
+  </div>
 
   <div id="gate" class="gate" hidden>
     <div class="gate-card" role="dialog" aria-modal="true" aria-labelledby="gate-title">
@@ -271,6 +275,13 @@
       <p class="mouse-only"><b class="hl">Click once</b> and it follows your cursor</p>
       <p><b>Scroll</b> or pinch to zoom</p>
       <p><b>Click a lit panel</b> to open it</p>
+      <div class="cursor-switch" id="cursor-switch" role="group" aria-label="Cursor style">
+        <span>Cursor</span>
+        <button type="button" data-cursor="reticle" aria-pressed="false">Reticle</button>
+        <button type="button" data-cursor="satellite" aria-pressed="false">Satellite</button>
+        <button type="button" data-cursor="viewfinder" aria-pressed="false">Viewfinder</button>
+        <button type="button" data-cursor="classic" aria-pressed="false">Classic</button>
+      </div>
     </div>
   </div>
 
@@ -292,6 +303,7 @@
   <script type="module" src="storage.js"></script>
   <script type="module" src="related.js"></script>
   <script type="module" src="lightbox.js"></script>
+  <script type="module" src="cursor.js"></script>
   <script type="module" src="calendar.js"></script>
 </body>
 </html>

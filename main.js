@@ -705,8 +705,10 @@ function processHover() {
   setHover(pick(x, y), x, y, mouse);
 }
 canvas.addEventListener('pointerleave', () => { pendingHover = null; lastMove = null; setHover(-1); });
+let panelClosedAt = 0;
+const panelBusy = () => state.current >= 0 || document.body.classList.contains('panel-open') || performance.now() - panelClosedAt < 600;
 canvas.addEventListener('pointerdown', (e) => {
-  downAt = { x: e.clientX, y: e.clientY };
+  downAt = { x: e.clientX, y: e.clientY, panel: panelBusy() };
   dragging = true;
   controls._sphericalDelta?.set(0, 0, 0);   // drop the spin's leftover momentum: the globe stops the instant you grab it
 });
@@ -716,12 +718,15 @@ window.addEventListener('blur', () => { dragging = false; });
 canvas.addEventListener('pointerup', (e) => {
   if (!downAt) return;
   const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+  const startedWithPanel = downAt.panel;
   downAt = null;
+  if (startedWithPanel) return;
   if (moved > 5) return;
   const faceId = pick(e.clientX, e.clientY);
   const dayIndex = state.faceToEntry.get(faceId);
   if (dayIndex !== undefined) { setFollowing(false); openEntry(dayIndex); }
-  else if (e.pointerType === 'mouse') {
+  // follow mode only from a clean click on the globe while no panel is open (not the click that closed one)
+  else if (e.pointerType === 'mouse' && !panelBusy()) {
     setFollowing(!following);
     pendingHover = { x: e.clientX, y: e.clientY, mouse: true };   // refresh the hint straight away
   }
@@ -786,6 +791,8 @@ function closePanel() {
   state.panelMeshes.forEach((m) => { m.userData.focus = false; });
   history.replaceState(null, '', location.pathname + location.search);
   flyTo(camera.position.clone(), CAMERA_DIST);
+  panelClosedAt = performance.now();
+  setFollowing(false);
   window.dispatchEvent(new CustomEvent('orbit:close'));
 }
 
