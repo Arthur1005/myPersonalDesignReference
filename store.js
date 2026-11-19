@@ -253,12 +253,13 @@ function updateSavebar(message) {
   const a = added.length;
   const u = pending.size;
   savebar.hidden = !editMode || (n === 0 && u === 0 && a === 0 && !message);
+  document.body.classList.toggle('unsaved', !savebar.hidden);
   if (message) { statusEl.textContent = message; return; }
   const parts = [];
   if (a) parts.push(`${a} new panel${a === 1 ? '' : 's'}`);
   if (n) parts.push(`${n} panel${n === 1 ? '' : 's'} changed`);
   if (u) parts.push(`${u} file${u === 1 ? '' : 's'} to upload`);
-  statusEl.textContent = `Unsaved: ${parts.join(', ')}`;
+  statusEl.textContent = `Not saved: ${parts.join(', ')}`;
 }
 
 /* ---------- export ---------- */

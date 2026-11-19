@@ -1028,3 +1028,11 @@ boot();
     vid.currentTime = Math.min(vid.duration || 0, Math.max(0, vid.currentTime + (e.key === 'ArrowRight' ? 1 : -1)));
   });
 }
+
+/* ------------------------------------------------------------------ *
+ *  Phones: no page zoom (pinch or double-tap) anywhere but the globe,
+ *  which handles its own pinch through the orbit controls.
+ * ------------------------------------------------------------------ */
+for (const t of ['gesturestart', 'gesturechange']) {
+  document.addEventListener(t, (e) => e.preventDefault(), { passive: false });
+}

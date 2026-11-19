@@ -1451,3 +1451,81 @@ body.custom-cursor #scene, body.custom-cursor #scene.pointer, body.custom-cursor
   .add-row { flex-wrap: wrap; }
   .add-row .add-field { flex: 1 1 100%; }
 }
+
+/* ================================================================== *
+ *  No page zoom on phones: double-tap is off (touch-action), and text
+ *  boxes are 16px so iOS doesn't zoom in when you tap into one.
+ * ================================================================== */
+html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+#scene { touch-action: none; }
+@media (max-width: 600px) {
+  input, textarea, select { font-size: 16px !important; }
+}
+
+/* ================================================================== *
+ *  Save bar: one slim row; docked along the bottom on phones
+ * ================================================================== */
+.savebar { gap: 8px; padding: 6px 6px 6px 12px; border-radius: 12px; border-color: var(--line); background: #fff; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); max-width: calc(100dvw - 1.5rem); }
+.save-dot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: hint-pulse 1.4s ease-in-out infinite; }
+#save-status { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--ink-2); }
+.savebar button { flex-shrink: 0; height: 32px; padding: 0 14px; border-radius: 8px; font-size: 12.5px; font-weight: 500; }
+#save-download { border-color: transparent; color: var(--ink-2); }
+#save-download:hover { color: var(--ink); background: var(--field); }
+
+@media (max-width: 600px) {
+  .savebar, body.panel-open .savebar {
+    left: 0.75rem; right: 0.75rem; transform: none;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+    z-index: 20; height: 48px; padding: 0 6px 0 14px; flex-wrap: nowrap;
+  }
+  .savebar button { height: 36px; }
+  /* make room for the bar */
+  body.unsaved .owner, body.unsaved .help { bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem); }
+  body.unsaved .panel { max-height: calc(100dvh - 3dvh - 4rem - env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ================================================================== *
+ *  Add / Replace: choose and paste side by side; bottom sheet on phones
+ * ================================================================== */
+.add-sources { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: stretch; }
+.add-sources .add-drop { grid-column: 1 / -1; }
+.paste-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 0; justify-self: start; }
+.add-sources .paste-btn { grid-column: 1; }
+.add-drop.has-image ~ .paste-btn { display: none; }
+
+@media (max-width: 600px) {
+  .add-scrim { background: rgba(232, 232, 229, 0.85); }
+  .add-dialog {
+    top: auto; bottom: 0; left: 0; right: 0; transform: none;
+    width: 100%; max-height: 92dvh;
+    padding: 1.25rem 1.25rem 0;
+    border-radius: 20px 20px 0 0; border-bottom: 0;
+    animation: sheet-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes sheet-up { from { transform: translateY(40%); opacity: 0; } }
+  .add-dialog::before { content: ""; display: block; width: 36px; height: 4px; margin: -0.5rem auto 0.9rem; border-radius: 2px; background: rgba(0, 0, 0, 0.15); }
+  .add-dialog h2 { font-size: 1.25rem; margin-bottom: 0.9rem; padding-right: 2.5rem; }
+  .add-dialog .close { top: 1rem; right: 1rem; }
+
+  /* empty: two tiles, choose (wide) + paste */
+  .add-sources { grid-template-columns: 1fr 6.5rem; }
+  .add-sources .add-drop { grid-column: 1; aspect-ratio: auto; height: 7.5rem; }
+  .add-sources .paste-btn { grid-column: 2; justify-self: stretch; width: 100%; flex-direction: column; height: 7.5rem; border-radius: 12px; border: 1px dashed rgba(0, 0, 0, 0.22); background: var(--field); color: var(--accent); font-size: 13px; font-weight: 500; }
+  .add-drop-text small { display: none; }
+  .add-drop-text b { font-size: 14px; }
+  /* chosen: preview fills the row */
+  .add-sources .add-drop.has-image { grid-column: 1 / -1; height: auto; aspect-ratio: 4 / 3; max-height: 36dvh; }
+
+  /* buttons: one full-width row stuck to the bottom of the sheet */
+  .add-actions {
+    position: sticky; bottom: 0; z-index: 2;
+    display: grid; grid-template-columns: 1fr 1.6fr; gap: 0.5rem;
+    margin: 1.25rem -1.25rem 0; padding: 0.75rem 1.25rem calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+    background: #fff; border-top: 1px solid var(--line);
+  }
+  .add-actions button { height: 48px; border-radius: 12px; font-size: 15px; }
+}
+
+/* form fields never wider than their column */
+.add-field { min-width: 0; }
+.add-field input, .add-field textarea { width: 100%; min-width: 0; }
