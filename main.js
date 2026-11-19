@@ -688,7 +688,7 @@ function escapeHTML(s = '') {
 let pendingHover = null;
 canvas.addEventListener('pointermove', (e) => {
   if (e.buttons) { setHover(-1); pendingHover = null; lastMove = null; return; }
-  if (following && e.pointerType === 'mouse') {
+  if (following && e.pointerType === 'mouse' && !panelBusy()) {
     if (lastMove) {
       const k = (2 * Math.PI * controls.rotateSpeed) / canvas.clientHeight;
       controls._rotateLeft(k * (e.clientX - lastMove.x));
@@ -709,6 +709,7 @@ let panelClosedAt = 0;
 const panelBusy = () => state.current >= 0 || document.body.classList.contains('panel-open') || performance.now() - panelClosedAt < 600;
 canvas.addEventListener('pointerdown', (e) => {
   downAt = { x: e.clientX, y: e.clientY, panel: panelBusy() };
+  if (downAt.panel) return;
   dragging = true;
   controls._sphericalDelta?.set(0, 0, 0);   // drop the spin's leftover momentum: the globe stops the instant you grab it
 });
@@ -741,6 +742,7 @@ const el = (id) => document.getElementById(id);
 function openEntry(dayIndex, { fly = true } = {}) {
   const e = state.entries[dayIndex];
   if (!e) return;
+  controls.enabled = false;            // globe holds still and ignores the mouse while a panel is open
   state.current = dayIndex;
   // a video panel plays in the card; its still frame is what the globe shows
   const vid = el('p-video');
@@ -793,11 +795,24 @@ function closePanel() {
   flyTo(camera.position.clone(), CAMERA_DIST);
   panelClosedAt = performance.now();
   setFollowing(false);
+  // the globe ignores the mouse for a moment, so the click that closed the panel can't turn or steer it
+  controls.enabled = false;
+  clearTimeout(closePanel.unlock);
+  closePanel.unlock = setTimeout(() => { if (state.current < 0) controls.enabled = true; }, 600);
   window.dispatchEvent(new CustomEvent('orbit:close'));
 }
 
 el('close').addEventListener('click', closePanel);
-el('scrim').addEventListener('click', closePanel);
+// the backdrop owns the whole press: nothing reaches the globe, and the panel closes on release
+let scrimPress = false;
+el('scrim').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); scrimPress = true; });
+el('scrim').addEventListener('pointerup', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  if (scrimPress) closePanel();           // only a press that started outside the card closes it
+  scrimPress = false;
+});
+window.addEventListener('pointerup', () => { scrimPress = false; });
+el('scrim').addEventListener('click', (e) => { e.stopPropagation(); });
 el('prev').addEventListener('click', () => openEntry(state.current - 1));
 el('next').addEventListener('click', () => openEntry(state.current + 1));
 window.addEventListener('keydown', (e) => {
