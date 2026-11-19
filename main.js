@@ -26,11 +26,13 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true,
 const MAX_PR = Math.min(window.devicePixelRatio, 1.5);
 let pixelRatio = MAX_PR;
 renderer.setPixelRatio(pixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
+// sized from the canvas's own box (see fitCanvas), not the window: on phones the window
+// reports a shorter height while the keyboard is open and doesn't always report back
+renderer.setSize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.05, 100);
+const camera = new THREE.PerspectiveCamera(42, (canvas.clientWidth || window.innerWidth) / (canvas.clientHeight || window.innerHeight), 0.05, 100);
 camera.position.set(0, 0.6, CAMERA_DIST);
 
 const controls = new OrbitControls(camera, canvas);
@@ -361,7 +363,7 @@ function buildNet(entryCount) {
       uColor: { value: NODE },
       uGlow: { value: ACCENT },
       uBackFade,
-      uScale: { value: renderer.getPixelRatio() * window.innerHeight * 0.5 },
+      uScale: { value: renderer.getPixelRatio() * (canvas.clientHeight || window.innerHeight) * 0.5 },
     },
     vertexShader: /* glsl */`
       attribute float phase; uniform float uTime; uniform float uScale; varying float vA; varying float vFacing;
@@ -611,7 +613,8 @@ let downAt = null;
 
 function pick(clientX, clientY) {
   if (!state.hitMesh) return -1;
-  pointer.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
+  const r = canvas.getBoundingClientRect();
+  pointer.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
   const hit = raycaster.intersectObject(state.hitMesh, false)[0];
   return hit ? state.hitMesh.userData.triCell[hit.faceIndex] : -1;
@@ -856,7 +859,7 @@ function adaptResolution(now) {
   if (slowTime > 1000 && pixelRatio > 1) {           // ~1s of sub-45fps frames
     pixelRatio = Math.max(1, pixelRatio - 0.25);
     renderer.setPixelRatio(pixelRatio);
-    if (state.nodeMat) state.nodeMat.uniforms.uScale.value = pixelRatio * window.innerHeight * 0.5;
+    if (state.nodeMat) state.nodeMat.uniforms.uScale.value = pixelRatio * canvas.clientHeight * 0.5;
     slowTime = 0;
   }
 }
@@ -901,12 +904,22 @@ function tick() {
   requestAnimationFrame(tick);
 }
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+/** Match the drawing to the canvas's real size on screen. */
+function fitCanvas() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  const size = renderer.getSize(new THREE.Vector2());
+  if (size.x === w && size.y === h) return;
+  camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  if (state.nodeMat) state.nodeMat.uniforms.uScale.value = pixelRatio * window.innerHeight * 0.5;
-});
+  renderer.setSize(w, h, false);
+  if (state.nodeMat) state.nodeMat.uniforms.uScale.value = pixelRatio * h * 0.5;
+}
+window.addEventListener('resize', fitCanvas);
+window.addEventListener('orientationchange', () => setTimeout(fitCanvas, 300));
+window.visualViewport?.addEventListener('resize', fitCanvas);
+document.addEventListener('focusout', () => setTimeout(fitCanvas, 350));   // keyboard closed
+if (window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
 
 /* ------------------------------------------------------------------ *
  *  Boot

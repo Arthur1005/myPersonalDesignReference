@@ -13,6 +13,7 @@ export const UPLOAD_DIR = 'entries/similar';
 const LS_DRAFTS = 'designOrbit.drafts.v2';
 const LS_DRAFTS_V1 = 'designOrbit.drafts';
 import { R2_ON, R2_BASE, isR2, r2Upload, R2AuthError } from './r2.js';
+import { askSecret } from './ask.js';
 
 const LS_TOKEN = 'designOrbit.githubToken';
 const LS_R2 = 'designOrbit.r2Keys';
@@ -325,12 +326,15 @@ const saveBtn = document.getElementById('save-github');
 saveBtn.addEventListener('click', async () => {
   let token = ls.get(LS_TOKEN);
   if (!token) {
-    token = window.prompt(
-      'Paste a GitHub fine-grained token with "Contents: Read and write" access to this repo only.\n' +
-      'It is stored in this browser only, and sent only to api.github.com.'
-    );
-    if (!token) return;
-    token = token.trim();
+    const v = await askSecret({
+      title: 'Connect GitHub',
+      help: 'Paste a fine-grained token with access to this repo only and “Contents: Read and write”. It’s only ever sent to api.github.com.',
+      link: { href: 'https://github.com/settings/personal-access-tokens/new', text: 'Create a token on GitHub' },
+      fields: [{ label: 'Token', placeholder: 'github_pat_…' }],
+      submit: 'Save to GitHub',
+    });
+    if (!v) return;
+    token = v[0];
     ls.set(LS_TOKEN, token);
   }
   const { owner, repo, branch } = repoInfo();
@@ -345,9 +349,14 @@ saveBtn.addEventListener('click', async () => {
     if ([...pending.keys()].some(isR2)) {
       try { r2Keys = JSON.parse(ls.get(LS_R2) || 'null'); } catch { r2Keys = null; }
       if (!r2Keys) {
-        const accessKeyId = (window.prompt('Videos upload to your Cloudflare R2 bucket.\nPaste the R2 token\'s Access Key ID (stored in this browser only):') || '').trim();
-        const secretAccessKey = accessKeyId && (window.prompt('Now paste its Secret Access Key:') || '').trim();
-        if (!accessKeyId || !secretAccessKey) { updateSavebar(); return; }
+        const v = await askSecret({
+          title: 'Connect your video bucket',
+          help: 'Videos upload to your Cloudflare R2 bucket. Paste the two keys from the R2 API token you created.',
+          fields: [{ label: 'Access Key ID' }, { label: 'Secret Access Key' }],
+          submit: 'Upload',
+        });
+        if (!v) { updateSavebar(); return; }
+        const [accessKeyId, secretAccessKey] = v;
         r2Keys = { accessKeyId, secretAccessKey };
         ls.set(LS_R2, JSON.stringify(r2Keys));
       }

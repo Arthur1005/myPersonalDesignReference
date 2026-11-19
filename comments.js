@@ -7,6 +7,7 @@
  * ------------------------------------------------------------------ */
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { access } from './gate.js';
+import { askSecret } from './ask.js';
 
 const ON = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 const owner = access === 'owner';
@@ -117,17 +118,23 @@ const mod = $('mod');
 const modList = $('mod-list');
 let pending = [];
 
-function getKey(ask) {
+async function getKey(ask) {
   let k = ls.get(LS_KEY);
   if (!k && ask) {
-    k = (window.prompt('Enter your comment moderation passphrase (the one you set in the Supabase setup).\nIt is stored in this browser only.') || '').trim();
+    const v = await askSecret({
+      title: 'Approve comments',
+      help: 'Enter the moderation passphrase you set in the Supabase setup.',
+      fields: [{ label: 'Passphrase' }],
+      submit: 'Continue',
+    });
+    k = v ? v[0] : '';
     if (k) ls.set(LS_KEY, k);
   }
   return k;
 }
 
 async function rpc(fn, args, ask = true) {
-  const secret = getKey(ask);
+  const secret = await getKey(ask);
   if (!secret) return null;
   try {
     return (await api(`rpc/${fn}`, { method: 'POST', body: { secret, ...args } })) ?? true;
