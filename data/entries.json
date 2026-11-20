@@ -98,6 +98,32 @@
         "strokes",
         "deception"
       ]
+    },
+    {
+      "date": "2026-11-20",
+      "title": "SANTAL Website",
+      "image": "entries/2026-11-20-screen-recording-2026-11-20-at-12-27-20--mba3n.webp",
+      "video": "https://pub-d17162a0f9b842afb541853412f07e91.r2.dev/videos/2026-11-20-screen-recording-2026-11-20-at-12-27-20--gqmha.webm",
+      "videoBytes": 13635068,
+      "frames": [
+        "entries/frames/2026-11-20-screen-recording-2026-11-20-at-12-27-20--i8r49.webp",
+        "entries/frames/2026-11-20-screen-recording-2026-11-20-at-12-27-20--tccqa.webp",
+        "entries/frames/2026-11-20-screen-recording-2026-11-20-at-12-27-20--pozkk.webp",
+        "entries/frames/2026-11-20-screen-recording-2026-11-20-at-12-27-20--xs6ob.webp"
+      ],
+      "author": "Inna Tskhay & Maksym Stepenko",
+      "note": "The entire website is telling a story – infinite scrolling. The homepage is connected to last page.",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://santalarch.com/"
+        }
+      ],
+      "keywords": [
+        "infinite scrolling",
+        "interaction design",
+        "scrolling"
+      ]
     }
   ]
 }
