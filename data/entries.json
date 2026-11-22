@@ -142,6 +142,29 @@
         "scrolling",
         "personalisation"
       ]
+    },
+    {
+      "date": "2026-11-22",
+      "title": "Recent Design Website",
+      "image": "entries/2026-11-22-screen-recording-2026-11-22-at-11-25-31--v7nyv.webp",
+      "video": "https://pub-d17162a0f9b842afb541853412f07e91.r2.dev/videos/2026-11-22-screen-recording-2026-11-22-at-11-25-31--zildi.webm",
+      "videoBytes": 9985366,
+      "frames": [
+        "entries/frames/2026-11-22-screen-recording-2026-11-22-at-11-25-31--8i49q.webp",
+        "entries/frames/2026-11-22-screen-recording-2026-11-22-at-11-25-31--yvjab.webp",
+        "entries/frames/2026-11-22-screen-recording-2026-11-22-at-11-25-31--cxoeg.webp",
+        "entries/frames/2026-11-22-screen-recording-2026-11-22-at-11-25-31--tpi9t.webp"
+      ],
+      "links": [
+        {
+          "type": "website",
+          "url": "https://recent.design/"
+        }
+      ],
+      "keywords": [
+        "layout",
+        "soundeffect"
+      ]
     }
   ]
 }
