@@ -1670,3 +1670,10 @@ body.editing [contenteditable]:empty::before { content: attr(data-placeholder); 
 body.editing .comments li { padding-right: 76px; }
 .comments li .ed { position: absolute; top: 7px; right: 32px; }
 .lg-ch svg.slim { width: auto; height: 0.86em; aspect-ratio: 10 / 24; max-width: 100%; }
+
+/* "Owner" badge beside your own comments */
+.owner-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; vertical-align: 1px;
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent); background: rgba(42, 107, 255, 0.1);
+}
