@@ -1,6 +1,7 @@
 {
   "entries": [
     {
+      "id": "2026-11-12|Sample — Bauhaus overlap",
       "date": "2026-11-12",
       "title": "Sample — Bauhaus overlap",
       "image": "entries/2026-11-12-sample.svg",
@@ -12,12 +13,14 @@
       ]
     },
     {
+      "id": "2026-11-13|Sample — Radial gradient study",
       "date": "2026-11-13",
       "title": "Sample — Radial gradient study",
       "image": "entries/2026-11-13-sample.svg",
       "note": "Placeholder entry. Soft gradients with thin concentric rings."
     },
     {
+      "id": "2026-11-14|Sample — Acid grid",
       "date": "2026-11-14",
       "title": "Sample — Acid grid",
       "image": "entries/2026-11-14-sample.svg",
@@ -29,6 +32,7 @@
       ]
     },
     {
+      "id": "2026-11-15|Savee's Search Bar",
       "date": "2026-11-15",
       "title": "Savee's Search Bar",
       "image": "entries/2026-11-15-dfw-08uix.webp",
@@ -51,11 +55,13 @@
       ]
     },
     {
+      "id": "2026-11-16|How Claude show step by step",
       "date": "2026-11-16",
       "title": "How Claude show step by step",
       "image": "entries/2026-11-16-wej-9mhx4.webp"
     },
     {
+      "id": "2026-11-16|Royden So's Portfolio",
       "date": "2026-11-16",
       "title": "Royden So's Portfolio",
       "image": "entries/2026-11-16-screen-recording-2026-11-16-at-5-30-29-p-7wvzn.webp",
@@ -81,6 +87,7 @@
       ]
     },
     {
+      "id": "2026-11-19|First Fidelity Bank logo",
       "date": "2026-11-19",
       "title": "First Fidelity Bank logo",
       "image": "entries/2026-11-19-first-fidelity-bank-logo-cwlkj.svg",
@@ -100,6 +107,7 @@
       ]
     },
     {
+      "id": "2026-11-20|SANTAL Website",
       "date": "2026-11-20",
       "title": "SANTAL Website",
       "image": "entries/2026-11-20-screen-recording-2026-11-20-at-12-27-20--mba3n.webp",
@@ -126,6 +134,7 @@
       ]
     },
     {
+      "id": "2026-11-21|Instagram Reels Personalisation",
       "date": "2026-11-21",
       "title": "Instagram Reels Personalisation",
       "image": "entries/2026-11-21-screenrecording-11-21-2026-14-poster-2u11f.webp",
@@ -144,6 +153,7 @@
       ]
     },
     {
+      "id": "2026-11-22|Recent Design Website",
       "date": "2026-11-22",
       "title": "Recent Design Website",
       "image": "entries/2026-11-22-screen-recording-2026-11-22-at-11-25-31--v7nyv.webp",
@@ -167,6 +177,7 @@
       ]
     },
     {
+      "id": "2026-11-23|Typeface - Mourn",
       "date": "2026-11-23",
       "title": "Typeface - Mourn",
       "image": "entries/2026-11-23-pasted-2026-11-23-1-l5zir.webp",
@@ -177,7 +188,7 @@
       ],
       "author": "Ubaldo Ortiz (Nina Type)",
       "authorUrl": "https://ninatype.com/",
-      "note": "'Inspired by the work of bobbin lace artisans'\nLegibility is worth discussion for this font. Some of the words can be easily read, but some are very difficult to understand.",
+      "note": "'Inspired by the work of bobbin lace artisans'\nLegibility is worth discussion for this font. Some of the letter can be easily read, but some are very difficult to understand.",
       "links": [
         {
           "type": "website",
