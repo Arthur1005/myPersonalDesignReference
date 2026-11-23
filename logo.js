@@ -46,33 +46,55 @@ if (h1) {
     return s;
   }).filter((s) => s.className === 'lg-ch');
 
-  let last = -1;
-  const pick = () => { let k; do { k = Math.floor(Math.random() * SHAPES.length); } while (k === last); last = k; return k; };
+  /* No element appears twice: a shape that's on screen can't be picked again (whatever its colour),
+     and each set is dealt from a shuffled deck, so every shape is used once before any comes back. */
+  const decks = { wide: [], slim: [] };
+  const showing = { wide: new Set(), slim: new Set() };
+  const shuffle = (n) => { const a = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  function deal(kind) {
+    const total = (kind === 'slim' ? NARROW : SHAPES).length;
+    for (let tries = 0; tries < 2; tries++) {
+      if (!decks[kind].length) decks[kind] = shuffle(total);
+      const i = decks[kind].findIndex((k) => !showing[kind].has(k));
+      if (i >= 0) { const k = decks[kind].splice(i, 1)[0]; showing[kind].add(k); return k; }
+      decks[kind] = [];   // everything left in the deck is on screen: start a fresh deck
+    }
+    return -1;            // every shape of this kind is already showing
+  }
+
+  /** Put the letter back right away (and free its shape for others). */
+  function settle(s) {
+    clearTimeout(s._back); clearTimeout(s._fade);
+    if (s._shape) { showing[s._shape[0]].delete(s._shape[1]); s._shape = null; }
+    s.classList.remove('shape', 'blue', 'out');
+    s.textContent = s.dataset.ch;
+    s.style.width = '';
+  }
 
   function morph(s) {
     clearTimeout(s._back);
-    if (!s.classList.contains('shape')) {
-      // keep the letter's width so nothing around it shifts
-      const w = s.getBoundingClientRect().width;
-      s.style.width = `${w}px`;
-      const em = parseFloat(getComputedStyle(s).fontSize) || 30;
-      const slim = (w - em * 0.12) / em < SLIM_EM;
-      s.innerHTML = slim
-        ? `<svg class="slim" viewBox="0 0 10 24" aria-hidden="true">${NARROW[Math.floor(Math.random() * NARROW.length)]}</svg>`
-        : `<svg viewBox="0 0 24 24" aria-hidden="true">${SHAPES[pick()]}</svg>`;
-      s.classList.add('shape');
-      s.classList.toggle('blue', Math.random() < 0.45);
-    }
+    if (s.classList.contains('out')) settle(s);         // was fading back: start again cleanly
+    if (s.classList.contains('shape')) return;           // already a shape: keep it
+    // keep the letter's width so nothing around it shifts
+    const w = s.getBoundingClientRect().width;
+    const em = parseFloat(getComputedStyle(s).fontSize) || 30;
+    const slim = (w - em * 0.12) / em < SLIM_EM;
+    const kind = slim ? 'slim' : 'wide';
+    const k = deal(kind);
+    if (k < 0) return;                                   // every shape is on screen: the letter stays a letter
+    s._shape = [kind, k];
+    s.style.width = `${w}px`;
+    s.innerHTML = slim
+      ? `<svg class="slim" viewBox="0 0 10 24" aria-hidden="true">${NARROW[k]}</svg>`
+      : `<svg viewBox="0 0 24 24" aria-hidden="true">${SHAPES[k]}</svg>`;
+    s.classList.add('shape');
+    s.classList.toggle('blue', Math.random() < 0.45);
   }
   function restore(s, delay = 650) {
     clearTimeout(s._back);
     s._back = setTimeout(() => {
       s.classList.add('out');
-      setTimeout(() => {
-        s.classList.remove('shape', 'blue', 'out');
-        s.textContent = s.dataset.ch;
-        s.style.width = '';
-      }, 160);
+      s._fade = setTimeout(() => settle(s), 160);
     }, delay);
   }
 
