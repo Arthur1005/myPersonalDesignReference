@@ -22,7 +22,7 @@ const LS_KEY = 'designOrbit.modKey';
 const LS_NAME = 'designOrbit.commentName';
 const LS_LAST = 'designOrbit.commentAt';
 
-const keyOf = (e) => `${e.date}|${e.title}`;
+const keyOf = (e) => e.id || `${e.date}|${e.title}`;   // permanent id: survives title/date edits
 const current = () => { const st = window.orbit?.state; return st && st.current >= 0 ? st.entries[st.current] : null; };
 const when = (iso) => new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 

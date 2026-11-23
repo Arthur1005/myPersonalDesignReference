@@ -33,7 +33,8 @@ export const editMode = access === 'owner';
 document.body.classList.toggle('editing', editMode);
 
 /* ---------- helpers ---------- */
-export const entryKey = (e) => `${e.date}|${e.title}`;
+/** A panel's permanent id (see main.js): stays the same when its title or date is edited. */
+export const entryKey = (e) => e.id || `${e.date}|${e.title}`;
 export const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ---------- drafts: { entryKey: { field: value } } ---------- */
@@ -176,10 +177,10 @@ async function restorePending() {
 /** Create a new entry from an image on the device. Returns its index on the globe. */
 export async function createEntry({ file, video, frames, title, date, note, author, authorUrl }) {
   let t = title.trim();
-  const taken = (x) => entries.some((e) => entryKey(e) === `${date}|${x}`);
+  const taken = (x) => entries.some((e) => entryKey(e) === `${date}|${x}` || (e.date === date && e.title === x));
   for (let n = 2; taken(t); n++) t = `${title.trim()} (${n})`;
   const image = await stageUpload(file, { date }, ENTRY_DIR);
-  const entry = { date, title: t, image };
+  const entry = { id: `${date}|${t}`, date, title: t, image };
   if (video) {
     entry.video = await stageUpload(video, { date }, ENTRY_DIR, { toBucket: R2_ON });
     entry.videoBytes = video.size;                                          // lets the storage meter add things up            // `image` is the video's still frame
@@ -326,7 +327,7 @@ function updateSavebar(message) {
 }
 
 /* ---------- export ---------- */
-const FIELD_ORDER = ['date', 'title', 'image', 'video', 'videoBytes', 'frames', 'media', 'author', 'authorUrl', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
+const FIELD_ORDER = ['id', 'date', 'title', 'image', 'video', 'videoBytes', 'frames', 'media', 'author', 'authorUrl', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
 function cleanEntry(e) {
   const out = {};
   const src = { ...e };
@@ -451,6 +452,7 @@ saveBtn.addEventListener('click', async () => {
       const file = await gh(`${api}/${ENTRIES_PATH}?ref=${branch}`, {}, headers);
       const remote = JSON.parse(b64decode(file.content));
       const list = remote.entries || remote;
+      for (const e of list) if (!e.id) e.id = `${e.date}|${e.title}`;   // stamp permanent ids before any rename
       const have = new Set(list.map(entryKey));
       for (const a of added) {
         if (have.has(entryKey(a))) continue;

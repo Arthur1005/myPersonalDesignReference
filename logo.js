@@ -21,6 +21,17 @@ const SHAPES = [
   '<circle cx="12" cy="12" r="2.5" class="f"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/>', // dashed ring
 ];
 
+// tall, slim ones for narrow letters like I, so they fill the letter's own space and no more
+const NARROW = [
+  '<rect x="2" y="2" width="6" height="20" rx="3"/>',                                          // capsule
+  '<path d="M5 2v20"/><circle cx="5" cy="12" r="2.6" class="f"/>',                              // slider
+  '<path d="M5 2v4M5 10v4M5 18v4"/>',                                                         // dashed rule
+  '<path d="M5 2v14"/><circle cx="5" cy="19.5" r="2.5"/>',                                     // pin
+  '<path d="M2 2h6M5 2v20M2 22h6"/>',                                                         // I-beam
+  '<path d="M5 2l3 5-3 5-3-5zM5 12l3 5-3 5-3-5z"/>',                                         // stacked diamonds
+],
+  SLIM_EM = 0.5;   // letters narrower than this (in em) get a slim shape
+
 if (h1) {
   const text = h1.textContent.trim();
   h1.setAttribute('aria-label', text);
@@ -42,8 +53,13 @@ if (h1) {
     clearTimeout(s._back);
     if (!s.classList.contains('shape')) {
       // keep the letter's width so nothing around it shifts
-      s.style.width = `${s.getBoundingClientRect().width}px`;
-      s.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${SHAPES[pick()]}</svg>`;
+      const w = s.getBoundingClientRect().width;
+      s.style.width = `${w}px`;
+      const em = parseFloat(getComputedStyle(s).fontSize) || 30;
+      const slim = (w - em * 0.12) / em < SLIM_EM;
+      s.innerHTML = slim
+        ? `<svg class="slim" viewBox="0 0 10 24" aria-hidden="true">${NARROW[Math.floor(Math.random() * NARROW.length)]}</svg>`
+        : `<svg viewBox="0 0 24 24" aria-hidden="true">${SHAPES[pick()]}</svg>`;
       s.classList.add('shape');
       s.classList.toggle('blue', Math.random() < 0.45);
     }

@@ -587,6 +587,7 @@ function rebuildPanels({ fresh = null } = {}) {
 
 /** Add a new entry to the globe; returns its index. */
 function addEntry(entry) {
+  if (!entry.id) entry.id = `${entry.date}|${entry.title}`;
   state.entries.push(entry);
   rebuildPanels({ fresh: entry });
   return state.entries.indexOf(entry);
@@ -991,6 +992,9 @@ async function boot() {
   } catch (err) {
     console.error('Could not load data/entries.json', err);
   }
+  // every panel keeps a permanent id, so its title and date can be edited without losing
+  // drafts or visitor comments; older panels use the date and title they were made with
+  for (const e of entries) if (!e.id) e.id = `${e.date}|${e.title}`;
   state.entries = entries;
   document.getElementById('filled').textContent = entries.length;
 

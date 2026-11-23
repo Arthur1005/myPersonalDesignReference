@@ -1637,8 +1637,10 @@ body.editing .edit-only[hidden] { display: none !important; }
 .lg-ch.shape { animation: lg-pop 0.28s cubic-bezier(0.2, 1.4, 0.4, 1); }
 .lg-ch.shape.out { animation: lg-out 0.16s ease forwards; }
 .lg-ch.blue { color: var(--accent); }
+.lg-ch.shape { display: inline-flex; align-items: center; justify-content: center; height: 1em; vertical-align: top; }
 .lg-ch svg {
-  width: 0.86em; height: 0.86em; display: block; margin: 0 auto; overflow: visible;
+  /* never wider than the letter it replaces (narrow ones like I get a smaller shape) */
+  width: min(0.86em, 100%); height: auto; aspect-ratio: 1; display: block; flex: none; overflow: visible;
   fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round;
 }
 .lg-ch svg .f { fill: currentColor; stroke: none; }
@@ -1646,3 +1648,25 @@ body.editing .edit-only[hidden] { display: none !important; }
 @keyframes lg-out { to { transform: scale(0.4) rotate(30deg); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .lg-ch.shape, .lg-ch.shape.out { animation: none; } }
 .lg-ch.shape { padding-right: 0.12em; }   /* the trailing letter-spacing: keep the shape centred on the letter */
+
+/* ---------- owner: title and note edited in place ---------- */
+body.editing .panel h2[contenteditable], body.editing .panel .note[contenteditable] {
+  border-radius: 6px; margin-left: -6px; margin-right: -6px; padding-left: 6px; padding-right: 6px;
+  outline: none; cursor: text; transition: background-color 0.15s, box-shadow 0.15s;
+}
+body.editing .panel h2[contenteditable]:hover, body.editing .panel .note[contenteditable]:hover { background: var(--field); }
+body.editing .panel h2[contenteditable]:focus, body.editing .panel .note[contenteditable]:focus { background: #fff; box-shadow: 0 0 0 1px var(--accent), 0 0 0 4px rgba(42, 107, 255, 0.12); }
+body.editing .panel .note[contenteditable] { display: block; min-height: 1.6em; margin-top: 12px; padding-top: 4px; padding-bottom: 4px; white-space: pre-wrap; }
+body.editing .panel .note:empty { display: block; }
+body.editing [contenteditable]:empty::before { content: attr(data-placeholder); color: var(--dim); pointer-events: none; }
+.panel .note { white-space: pre-wrap; }
+.credit-form input[type="date"] { -webkit-appearance: none; appearance: none; text-align: left; }
+/* small Edit buttons beside links and comments */
+.links li .ed, .comments li .ed {
+  padding: 2px 8px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 11px;
+  color: var(--dim); cursor: pointer; -webkit-appearance: none; appearance: none;
+}
+.links li .ed:hover, .comments li .ed:hover { color: var(--accent); background: rgba(42, 107, 255, 0.08); }
+body.editing .comments li { padding-right: 76px; }
+.comments li .ed { position: absolute; top: 7px; right: 32px; }
+.lg-ch svg.slim { width: auto; height: 0.86em; aspect-ratio: 10 / 24; max-width: 100%; }
