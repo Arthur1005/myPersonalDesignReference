@@ -1630,3 +1630,19 @@ body.editing .edit-only[hidden] { display: none !important; }
 .m-menu button.danger:hover { background: #fdf1ef; color: #c0392b; }
 .m-menu button.danger.confirm { background: #c0392b; color: #fff; }
 .add-more-btn { font: inherit; font-size: 12px; padding: 0; -webkit-appearance: none; appearance: none; }
+
+/* ---------- logo: letters turn into design elements on hover ---------- */
+.masthead h1 { pointer-events: auto; display: inline-block; cursor: default; user-select: none; -webkit-user-select: none; }
+.lg-ch { display: inline-block; text-align: center; vertical-align: top; transition: color 0.15s; }
+.lg-ch.shape { animation: lg-pop 0.28s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.lg-ch.shape.out { animation: lg-out 0.16s ease forwards; }
+.lg-ch.blue { color: var(--accent); }
+.lg-ch svg {
+  width: 0.86em; height: 0.86em; display: block; margin: 0 auto; overflow: visible;
+  fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round;
+}
+.lg-ch svg .f { fill: currentColor; stroke: none; }
+@keyframes lg-pop { from { transform: scale(0.3) rotate(-40deg); opacity: 0; } }
+@keyframes lg-out { to { transform: scale(0.4) rotate(30deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .lg-ch.shape, .lg-ch.shape.out { animation: none; } }
+.lg-ch.shape { padding-right: 0.12em; }   /* the trailing letter-spacing: keep the shape centred on the letter */
