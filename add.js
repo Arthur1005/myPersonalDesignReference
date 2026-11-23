@@ -291,7 +291,7 @@ function setFile(f) {
   $('add-drop-text').innerHTML = video ? '<b>Change video</b>' : '<b>Change image</b>';
   renderExtras();
   // suggest a title from the file name if none yet
-  if (!nameInput.value.trim()) {
+  if (!nameInput.value.trim() && !/^pasted-/.test(f.name)) {
     nameInput.value = f.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
     nameInput.select();
   }
@@ -340,23 +340,37 @@ function authorUrl() {
 }
 
 // one-click paste: read an image straight from the clipboard
-$('add-paste').addEventListener('click', async () => {
-  try {
-    const items = await navigator.clipboard.read();
-    for (const it of items) {
-      const type = it.types.find((t) => t.startsWith('image/') || t.startsWith('video/'));
-      if (!type) continue;
-      const blob = await it.getType(type);
-      const f = new File([blob], `pasted-${localISO()}.${type.split('/')[1].replace('svg+xml', 'svg')}`, { type });
-      // nothing chosen yet: it becomes the main one; otherwise it's added after
-      if (!file || mode === 'replace') setFile(f); else addExtras([f]);
-      return;
-    }
-    showErr(errFile, 'There’s no image on the clipboard. Copy an image first (right-click → Copy image).');
-  } catch {
-    showErr(errFile, 'This browser didn’t allow reading the clipboard. Press ⌘V / Ctrl+V in this dialog instead.');
+/** Everything image- or video-like on the clipboard, as files. Throws if the browser won't allow reading it. */
+async function clipboardFiles() {
+  const items = await navigator.clipboard.read();
+  const files = [];
+  for (const it of items) {
+    const type = it.types.find((t) => t.startsWith('image/') || t.startsWith('video/'));
+    if (!type) continue;
+    const blob = await it.getType(type);
+    files.push(new File([blob], `pasted-${localISO()}-${files.length + 1}.${type.split('/')[1].replace('svg+xml', 'svg')}`, { type }));
   }
-});
+  return files;
+}
+const NOTHING = 'There’s no image on the clipboard. Copy an image first (right-click or long-press → Copy image).';
+const BLOCKED = 'This browser didn’t allow reading the clipboard. Press ⌘V / Ctrl+V in this dialog instead.';
+
+/** Paste: the first image becomes the main one if there isn't one yet; anything else is added after it. */
+async function pasteIn() {
+  try {
+    const got = await clipboardFiles();
+    if (!got.length) { showErr(errFile, NOTHING); return; }
+    errFile.hidden = true;
+    if (mode === 'replace') setFile(got[0]);
+    else if (!file) setFiles(got);
+    else addExtras(got);
+  } catch {
+    showErr(errFile, BLOCKED);
+  }
+}
+$('add-paste').addEventListener('click', pasteIn);
+$('add-more-paste').addEventListener('click', pasteIn);
+
 for (const id of ['add-author', 'add-author-url']) $(id).addEventListener('input', () => { errName.hidden = true; });
 
 let replacing = null;     // the panel being changed, or null when adding a new one
@@ -401,6 +415,26 @@ window.addEventListener('orbit:media', (ev) => {
   removeBtn.textContent = 'Remove from panel';
   removeBtn.classList.remove('confirm');
   $('p-replace').textContent = ev.detail.count > 1 ? 'Replace this one' : 'Replace image or video';
+});
+$('p-paste').addEventListener('click', async () => {
+  const st = window.orbit.state;
+  const e = st.entries[st.current];
+  const b = $('p-paste');
+  const say = (t) => { b.textContent = t; clearTimeout(b._t); b._t = setTimeout(() => { b.textContent = 'Paste from clipboard'; }, 2200); };
+  if (!e) return;
+  let got;
+  try { got = await clipboardFiles(); } catch { say('Clipboard not allowed here'); return; }
+  got = got.filter((f) => !isVideo(f) && !problemWith(f, true));   // clipboards carry images; videos go through Add
+  if (!got.length) { say('No image on the clipboard'); return; }
+  say('Adding…');
+  try {
+    const before = window.orbit.mediaOf(e).length;
+    await addMedia(e, got.map((f) => ({ file: f })));
+    window.orbit.showMedia(before);
+    say(got.length > 1 ? `Added ${got.length} ✓` : 'Added ✓');
+  } catch (err) {
+    say('Couldn’t add it');
+  }
 });
 coverBtn.addEventListener('click', () => {
   const st = window.orbit.state;
@@ -521,7 +555,7 @@ whenReady(() => { openBtn.hidden = !editMode; });
   menu.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b || b.id === 'p-remove' && b.classList.contains('confirm')) return;
-    if (b.id === 'p-copy') { setTimeout(() => set(false), 1400); return; }
+    if (b.id === 'p-copy' || b.id === 'p-paste') { setTimeout(() => set(false), 1400); return; }
     set(false);
   });
   document.addEventListener('pointerdown', (e) => { if (!menu.hidden && !e.target.closest('.media-actions')) set(false); });

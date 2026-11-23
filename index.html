@@ -6,7 +6,7 @@
   <title>Design Orbit — a daily design reference</title>
   <meta name="description" content="One piece of design inspiration a day, stitched into a net around the globe." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27none%27 stroke=%27%236ff3ff%27 stroke-width=%272%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%276%27 fill=%27%232a6bff%27/%3E%3C/svg%3E" />
-  <meta name="build" content="be0ecb93c4" />
+  <meta name="build" content="68b9482259" />
   <script>
     /* If this page is an old cached copy, load the current one (once). Keeps every file
        on the same version, so a half-updated mix can't show up on any device. */
@@ -21,13 +21,13 @@
       }).catch(function () {});
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=ff15d2c9" />
+  <link rel="stylesheet" href="style.css?v=12e9c3a9" />
   <script type="importmap">
     {
       "imports": {
         "three": "./vendor/three.module.min.js?v=512c8b83",
         "three/addons/OrbitControls.js": "./vendor/OrbitControls.js?v=339028c2",
-        "./add.js": "./add.js?v=21343d5e",
+        "./add.js": "./add.js?v=b107ca51",
         "./ask.js": "./ask.js?v=b8b78e3f",
         "./calendar.js": "./calendar.js?v=e2559ab3",
         "./comments.js": "./comments.js?v=3d64e806",
@@ -105,6 +105,7 @@
         <input type="file" id="add-more-file" multiple accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" />
         <span>+ More</span>
       </label>
+      <button type="button" class="add-more-btn" id="add-more-paste" title="Paste another image from the clipboard">Paste</button>
       <p class="add-more-note" id="add-more-note"></p>
     </div>
     <p class="add-usage" id="add-usage" hidden></p>
@@ -187,6 +188,7 @@
         </button>
         <div class="m-menu" id="m-menu" role="menu" hidden>
           <button type="button" role="menuitem" id="p-add-media">Add images or videos</button>
+          <button type="button" role="menuitem" id="p-paste">Paste from clipboard</button>
           <button type="button" role="menuitem" id="p-replace">Replace this one</button>
           <button type="button" role="menuitem" id="p-cover" hidden>Show this one on the globe</button>
           <button type="button" role="menuitem" id="p-copy">Copy image</button>
@@ -339,7 +341,7 @@
   <script type="module" src="keywords.js?v=2571ee82"></script>
   <script type="module" src="details.js?v=b9431dd4"></script>
   <script type="module" src="comments.js?v=3d64e806"></script>
-  <script type="module" src="add.js?v=21343d5e"></script>
+  <script type="module" src="add.js?v=b107ca51"></script>
   <script type="module" src="storage.js?v=fca75c78"></script>
   <script type="module" src="related.js?v=8bb49e5e"></script>
   <script type="module" src="lightbox.js?v=5675e741"></script>

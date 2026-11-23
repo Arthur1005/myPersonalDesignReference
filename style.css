@@ -1629,3 +1629,4 @@ body.editing .edit-only[hidden] { display: none !important; }
 .m-menu button.danger { color: #c0392b; }
 .m-menu button.danger:hover { background: #fdf1ef; color: #c0392b; }
 .m-menu button.danger.confirm { background: #c0392b; color: #fff; }
+.add-more-btn { font: inherit; font-size: 12px; padding: 0; -webkit-appearance: none; appearance: none; }
