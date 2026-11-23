@@ -4,8 +4,8 @@
  *  These two values are safe to publish: the database only lets the
  *  public read approved comments and submit new ones for approval.
  * ------------------------------------------------------------------ */
-export const SUPABASE_URL = '';        // e.g. 'https://abcdefghijkl.supabase.co'
-export const SUPABASE_ANON_KEY = '';   // the project's publishable / anon key
+export const SUPABASE_URL = 'https://pnszphddwqptjzcnkeup.supabase.co';        // e.g. 'https://abcdefghijkl.supabase.co'
+export const SUPABASE_ANON_KEY = 'sb_publishable_055fLqaMerpzasqc9Rx9pg_JGqVjLkb';   // the project's publishable / anon key
 
 /* ------------------------------------------------------------------ *
  *  Big videos (optional): a Cloudflare R2 bucket. Leave empty to keep
