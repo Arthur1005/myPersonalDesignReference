@@ -6,7 +6,7 @@
   <title>Design Orbit — a daily design reference</title>
   <meta name="description" content="One piece of design inspiration a day, stitched into a net around the globe." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27none%27 stroke=%27%236ff3ff%27 stroke-width=%272%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%276%27 fill=%27%232a6bff%27/%3E%3C/svg%3E" />
-  <meta name="build" content="ae57d4b316" />
+  <meta name="build" content="0d37ba245a" />
   <script>
     /* If this page is an old cached copy, load the current one (once). Keeps every file
        on the same version, so a half-updated mix can't show up on any device. */
@@ -21,7 +21,7 @@
       }).catch(function () {});
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=69371563" />
+  <link rel="stylesheet" href="style.css?v=6e63cfdf" />
   <script type="importmap">
     {
       "imports": {
@@ -30,7 +30,7 @@
         "./add.js": "./add.js?v=b107ca51",
         "./ask.js": "./ask.js?v=b8b78e3f",
         "./calendar.js": "./calendar.js?v=e2559ab3",
-        "./comments.js": "./comments.js?v=09fd816b",
+        "./comments.js": "./comments.js?v=6100bd6e",
         "./config.js": "./config.js?v=c6dac426",
         "./cursor.js": "./cursor.js?v=3fdb9b63",
         "./details.js": "./details.js?v=8dceaa55",
@@ -245,20 +245,28 @@
       </section>
 
       <section class="sec" id="comments-sec" aria-label="Comments">
-        <h3>Comments</h3>
+        <h3>Comments <span class="c-count" id="c-count"></span></h3>
         <ol class="comments" id="comments"></ol>
         <form class="add-comment edit-only" id="comment-form" novalidate>
           <textarea id="comment-text" rows="2" maxlength="2000" placeholder="Write a comment…" aria-label="Comment"></textarea>
           <button type="submit">Post</button>
         </form>
         <ol class="comments" id="vcomments"></ol>
-        <form class="add-comment v-form" id="v-form" novalidate hidden>
-          <textarea id="v-text" rows="2" maxlength="1000" placeholder="Leave a comment…" aria-label="Your comment"></textarea>
-          <div class="v-row">
-            <input id="v-name" type="text" maxlength="40" placeholder="Your name (optional)" aria-label="Your name (optional)" autocomplete="name" />
-            <input id="v-website" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
-            <button type="submit">Post</button>
+        <form class="v-form" id="v-form" novalidate hidden>
+          <p class="v-invite" id="v-invite">Be the first to comment on this one.</p>
+          <div class="v-box">
+            <span class="v-avatar" id="v-avatar" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16"><circle cx="10" cy="7" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 17c1.2-3.2 3.6-4.8 6.5-4.8s5.3 1.6 6.5 4.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+            <div class="v-fields">
+              <textarea id="v-text" rows="1" maxlength="1000" placeholder="What do you think of it?" aria-label="Your comment"></textarea>
+              <div class="v-more">
+                <input id="v-name" type="text" maxlength="40" placeholder="Your name (optional)" aria-label="Your name (optional)" autocomplete="name" />
+                <input id="v-website" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+                <button type="submit" id="v-post" disabled>Post</button>
+              </div>
+            </div>
           </div>
+          <div class="v-chips" id="v-chips" aria-label="Quick replies"></div>
+          <p class="v-fine">No sign-up needed. Comments show once Arthur has had a look.</p>
         </form>
         <p class="form-note" id="v-note" role="status" hidden></p>
       </section>
@@ -342,7 +350,7 @@
   <script type="module" src="main.js?v=4e974735"></script>
   <script type="module" src="keywords.js?v=2571ee82"></script>
   <script type="module" src="details.js?v=8dceaa55"></script>
-  <script type="module" src="comments.js?v=09fd816b"></script>
+  <script type="module" src="comments.js?v=6100bd6e"></script>
   <script type="module" src="add.js?v=b107ca51"></script>
   <script type="module" src="storage.js?v=fca75c78"></script>
   <script type="module" src="related.js?v=8bb49e5e"></script>

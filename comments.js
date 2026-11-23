@@ -21,6 +21,13 @@ const ls = {
 const LS_KEY = 'designOrbit.modKey';
 const LS_NAME = 'designOrbit.commentName';
 const LS_LAST = 'designOrbit.commentAt';
+const LS_SENT = 'designOrbit.commentsSent';   // this visitor's comments still waiting for approval
+
+/* quick replies: one tap starts a comment (people can still change it) */
+const CHIPS = ['Love the colours', 'Great type', 'Clever layout', 'So clean', 'Saving this', 'Where is this from?'];
+
+const sentList = () => { try { return JSON.parse(ls.get(LS_SENT) || '[]'); } catch { return []; } };
+const keepSent = (list) => ls.set(LS_SENT, JSON.stringify(list.filter((c) => Date.now() - Date.parse(c.at) < 14 * 864e5).slice(-30)));
 
 const keyOf = (e) => e.id || `${e.date}|${e.title}`;   // permanent id: survives title/date edits
 const current = () => { const st = window.orbit?.state; return st && st.current >= 0 ? st.entries[st.current] : null; };
@@ -51,6 +58,19 @@ const form = $('v-form');
 const note = $('v-note');
 let loadId = 0;
 
+const row = (c, { mine = false } = {}) => `
+      <li class="${mine ? 'pending' : ''}">
+        <time datetime="${esc(c.created_at)}"><b>${esc(c.name || 'Anonymous')}</b>${mine ? '<span class="wait-tag">Waiting for approval</span>' : ''} · ${esc(when(c.created_at))}</time>
+        <p>${esc(c.body)}</p>
+        ${owner && !mine ? `<button type="button" class="x" data-del="${esc(c.id)}" aria-label="Delete comment">×</button>` : ''}
+      </li>`;
+
+function updateCount() {
+  const n = $('comments').children.length + listEl.querySelectorAll('li:not(.pending)').length;
+  $('c-count').textContent = n ? String(n) : '';
+  $('v-invite').textContent = n ? 'Join the conversation.' : 'Be the first to comment on this one.';
+}
+
 async function load() {
   const e = current();
   if (!ON || !e) return;
@@ -59,18 +79,61 @@ async function load() {
   form.hidden = owner;
   note.hidden = true;
   listEl.innerHTML = '';
+  setChips();
+  let rows = [];
   try {
-    const rows = await api(`comments?entry=eq.${encodeURIComponent(keyOf(e))}&approved=is.true&select=id,name,body,created_at&order=created_at.asc`);
-    if (id !== loadId) return;
-    listEl.innerHTML = (rows || []).map((c) => `
-      <li>
-        <time datetime="${esc(c.created_at)}"><b>${esc(c.name || 'Anonymous')}</b> · ${esc(when(c.created_at))}</time>
-        <p>${esc(c.body)}</p>
-        ${owner ? `<button type="button" class="x" data-del="${esc(c.id)}" aria-label="Delete comment">×</button>` : ''}
-      </li>`).join('');
+    rows = await api(`comments?entry=eq.${encodeURIComponent(keyOf(e))}&approved=is.true&select=id,name,body,created_at&order=created_at.asc`) || [];
   } catch { /* comments are a nicety: stay quiet if the service is unreachable */ }
+  if (id !== loadId) return;
+  // this visitor's own comments that haven't been approved yet: shown only to them, marked as waiting
+  const approved = new Set(rows.map((r) => r.body));
+  const all = sentList();
+  const mine = owner ? [] : all.filter((c) => c.entry === keyOf(e) && !approved.has(c.body));
+  keepSent(all.filter((c) => !(c.entry === keyOf(e) && approved.has(c.body))));
+  listEl.innerHTML = rows.map((c) => row(c)).join('') + mine.map((c) => row({ ...c, created_at: c.at }, { mine: true })).join('');
+  updateCount();
   $('comments-sec').hidden = false;
 }
+
+/* ---------- the comment box: small until you use it ---------- */
+const textEl = $('v-text');
+const postBtn = $('v-post');
+const nameEl = $('v-name');
+function grow() { textEl.style.height = 'auto'; textEl.style.height = `${Math.min(textEl.scrollHeight, 180)}px`; }
+function sync() {
+  postBtn.disabled = !textEl.value.trim();
+  form.classList.toggle('open', form.classList.contains('open') || document.activeElement === textEl || !!textEl.value);
+  const n = nameEl.value.trim();
+  $('v-avatar').classList.toggle('named', !!n);
+  if (n) $('v-avatar').textContent = n[0].toUpperCase();
+  else if (!$('v-avatar').querySelector('svg')) $('v-avatar').innerHTML = AVATAR;
+}
+const AVATAR = $('v-avatar')?.innerHTML || '';
+function setChips() {
+  const e = current();
+  // a keyword of this panel makes one chip feel specific to it
+  const kw = (e?.keywords || e?.tags || [])[0];
+  const chips = [...CHIPS];
+  if (kw) chips.splice(2, 0, `Nice ${String(kw).toLowerCase()}`);
+  $('v-chips').innerHTML = chips.slice(0, 6).map((t) => `<button type="button" class="v-chip">${esc(t)}</button>`).join('');
+}
+$('v-chips')?.addEventListener('click', (ev) => {
+  const b = ev.target.closest('.v-chip');
+  if (!b) return;
+  const t = b.textContent;
+  textEl.value = textEl.value.trim() ? `${textEl.value.trim()} ${t}` : t;
+  form.classList.add('open');
+  textEl.focus();
+  textEl.setSelectionRange(textEl.value.length, textEl.value.length);
+  grow(); sync();
+});
+textEl?.addEventListener('focus', () => { form.classList.add('open'); sync(); });
+textEl?.addEventListener('input', () => { grow(); sync(); note.hidden = true; });
+nameEl?.addEventListener('input', sync);
+textEl?.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); form.requestSubmit(); }
+});
+window.addEventListener('orbit:close', () => { form.classList.remove('open'); });
 
 function say(msg, bad = false) {
   note.textContent = msg;
@@ -86,8 +149,9 @@ form?.addEventListener('submit', async (ev) => {
   if (!e) return;
   if (!text) { say('Write a comment first.', true); $('v-text').focus(); return; }
   if (Date.now() - Number(ls.get(LS_LAST) || 0) < 20000) { say('Give it a few seconds before posting again.', true); return; }
-  const btn = form.querySelector('button');
+  const btn = postBtn;
   btn.disabled = true;
+  btn.textContent = 'Posting…';
   try {
     // "website" is a trap for bots: people never see it, so if it's filled we quietly drop the comment
     if (!$('v-website').value) {
@@ -95,16 +159,22 @@ form?.addEventListener('submit', async (ev) => {
     }
     ls.set(LS_LAST, String(Date.now()));
     if (name) ls.set(LS_NAME, name); else ls.del(LS_NAME);
-    $('v-text').value = '';
-    say('Thanks! Your comment will appear once it’s approved.');
+    const at = new Date().toISOString();
+    keepSent([...sentList(), { entry: keyOf(e), name: name || null, body: text.slice(0, 1000), at }]);
+    // show it straight away, marked as waiting, so it doesn't feel like it disappeared
+    listEl.insertAdjacentHTML('beforeend', row({ name, body: text, created_at: at }, { mine: true }));
+    textEl.value = '';
+    form.classList.remove('open');
+    grow();
+    say(`Thanks${name ? `, ${name}` : ''}! Your comment is in. Everyone will see it once Arthur approves it.`);
   } catch (err) {
     say(`Couldn’t post that: ${err.message}`, true);
   } finally {
-    btn.disabled = false;
+    btn.textContent = 'Post';
+    sync();
   }
 });
 for (const id of ['v-text', 'v-name']) $(id)?.addEventListener('keydown', (ev) => ev.stopPropagation());
-$('v-text')?.addEventListener('input', () => { note.hidden = true; });
 
 listEl?.addEventListener('click', async (ev) => {
   const b = ev.target.closest('[data-del]');
@@ -187,5 +257,6 @@ if (ON && owner) {
 
 if (ON) {
   if ($('v-name') && ls.get(LS_NAME)) $('v-name').value = ls.get(LS_NAME);
+  sync();
   window.addEventListener('orbit:open', () => requestAnimationFrame(load));
 }
