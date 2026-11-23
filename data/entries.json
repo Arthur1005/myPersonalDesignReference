@@ -177,7 +177,18 @@
       ],
       "author": "Ubaldo Ortiz (Nina Type)",
       "authorUrl": "https://ninatype.com/",
-      "note": "'Inspired by the work of bobbin lace artisans'\nLegibility is worth discussion for this font. Some of the words can be easily read, but some are very difficult to understand."
+      "note": "'Inspired by the work of bobbin lace artisans'\nLegibility is worth discussion for this font. Some of the words can be easily read, but some are very difficult to understand.",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://ninatype.com/typefaces/mourn"
+        }
+      ],
+      "keywords": [
+        "typeface",
+        "legibility",
+        "digital scanning"
+      ]
     }
   ]
 }
