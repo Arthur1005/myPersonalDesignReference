@@ -24,7 +24,8 @@ const level = (f) => (f >= FULL ? 'full' : f >= WARN ? 'warn' : '');
 let entries = [];
 let ghBytes = null;
 
-const videoBytes = () => entries.reduce((s, e) => s + (e.video && isR2(e.video) ? e.videoBytes || 0 : 0), 0);
+const inBucket = (m) => (m && m.video && isR2(m.video) ? m.videoBytes || 0 : 0);
+const videoBytes = () => entries.reduce((s, e) => s + inBucket(e) + (Array.isArray(e.media) ? e.media.reduce((t, m) => t + inBucket(m), 0) : 0), 0);
 
 function row(id, used, limit, note) {
   const el = $(id);

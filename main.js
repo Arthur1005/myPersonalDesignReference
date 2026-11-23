@@ -729,21 +729,34 @@ canvas.addEventListener('pointerup', (e) => {
 const panel = document.getElementById('panel');
 const el = (id) => document.getElementById(id);
 
-function openEntry(dayIndex, { fly = true } = {}) {
-  const e = state.entries[dayIndex];
+/* ---------- the card's images and videos ----------
+ * The first one (entry.image / entry.video) is the cover the globe shows;
+ * any more live in entry.media as [{ image, video?, videoBytes?, frames? }]. */
+function mediaOf(e) {
+  if (!e) return [];
+  const cover = { image: e.image };
+  if (e.video) Object.assign(cover, { video: e.video, videoBytes: e.videoBytes, frames: e.frames });
+  return [cover, ...(Array.isArray(e.media) ? e.media : [])];
+}
+
+function showMedia(i) {
+  const e = state.entries[state.current];
   if (!e) return;
-  controls.enabled = false;            // globe holds still and ignores the mouse while a panel is open
-  state.current = dayIndex;
-  // a video panel plays in the card; its still frame is what the globe shows
+  const list = mediaOf(e);
+  const n = list.length;
+  i = ((i % n) + n) % n;
+  state.media = i;
+  const m = list[i];
+  // a video plays in the card; its still frame is what lists and the globe show
   const vid = el('p-video');
-  el('p-image').hidden = !!e.video;
-  vid.hidden = !e.video;
-  el('vid-ui').hidden = !e.video;
-  if (e.video) {
-    const src = resolveImage(e.video);
+  el('p-image').hidden = !!m.video;
+  vid.hidden = !m.video;
+  el('vid-ui').hidden = !m.video;
+  if (m.video) {
+    const src = resolveImage(m.video);
     if (vid.dataset.src !== src) {
       vid.dataset.src = src;
-      vid.poster = resolveImage(e.image);
+      vid.poster = resolveImage(m.image);
       // videos in the bucket are on another address: ask for them in a way that lets Magnify read a frame
       const remote = /^https?:/.test(src) && !src.startsWith(location.origin);
       if (remote) vid.crossOrigin = 'anonymous'; else vid.removeAttribute('crossorigin');
@@ -755,8 +768,51 @@ function openEntry(dayIndex, { fly = true } = {}) {
   } else if (vid.dataset.src) {
     vid.pause(); vid.removeAttribute('src'); vid.removeAttribute('poster'); delete vid.dataset.src; vid.load();
   }
-  el('p-image').src = resolveImage(e.image);
-  el('p-image').alt = e.title;
+  el('p-image').src = resolveImage(m.image);
+  el('p-image').alt = n > 1 ? `${e.title} (${i + 1} of ${n})` : e.title;
+
+  // arrows and dots only when there's more than one
+  el('m-prev').hidden = el('m-next').hidden = el('m-dots').hidden = n < 2;
+  const dots = el('m-dots');
+  if (dots.childElementCount !== n) {
+    dots.innerHTML = list.map((_, k) => `<button type="button" data-k="${k}" aria-label="Show ${k + 1} of ${n}"></button>`).join('');
+  }
+  [...dots.children].forEach((d, k) => d.setAttribute('aria-current', String(k === i)));
+  el('panel').classList.toggle('multi', n > 1);
+  window.dispatchEvent(new CustomEvent('orbit:media', { detail: { index: i, count: n } }));
+}
+el('m-prev').addEventListener('click', () => showMedia(state.media - 1));
+el('m-next').addEventListener('click', () => showMedia(state.media + 1));
+el('m-dots').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) showMedia(Number(b.dataset.k)); });
+// swipe left / right on the picture (phones)
+{
+  const fig = el('p-image').parentElement;
+  let start = null;
+  fig.addEventListener('pointerdown', (ev) => {
+    if (ev.pointerType === 'mouse' || ev.target.closest('button, .vid-bar')) return;
+    start = { x: ev.clientX, y: ev.clientY };
+  });
+  fig.addEventListener('pointerup', (ev) => {
+    if (!start) return;
+    const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
+    start = null;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (mediaOf(state.entries[state.current]).length < 2) return;
+    fig.dataset.swiped = String(Date.now());   // so the lift-off doesn't also open the viewer / pause the video
+    showMedia(state.media + (dx < 0 ? 1 : -1));
+  });
+  fig.addEventListener('pointercancel', () => { start = null; });
+  fig.addEventListener('click', (ev) => {
+    if (Date.now() - Number(fig.dataset.swiped || 0) < 400) { ev.stopPropagation(); ev.preventDefault(); }
+  }, true);
+}
+
+function openEntry(dayIndex, { fly = true } = {}) {
+  const e = state.entries[dayIndex];
+  if (!e) return;
+  controls.enabled = false;            // globe holds still and ignores the mouse while a panel is open
+  state.current = dayIndex;
+  showMedia(0);
   el('p-day').textContent = `Day ${String(dayIndex + 1).padStart(3, '0')} · ${formatDate(e.date)}`;
   el('p-title').textContent = e.title;
   el('p-note').textContent = e.note || '';
@@ -947,6 +1003,8 @@ async function boot() {
     controls,
     ready: true,
     openEntry,
+    showMedia,
+    mediaOf,
     // light up a set of panels (by entry index); [] clears
     highlightEntries(indices) { state.highlight = new Set(indices); },
     addEntry,

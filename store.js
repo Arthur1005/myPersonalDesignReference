@@ -197,9 +197,71 @@ export async function createEntry({ file, video, frames, title, date, note, auth
   return index;
 }
 
-/** Swap a panel's image or video for a new one (old files stay in the repo / bucket, unused). */
-export async function replaceMedia(entry, { file, video, frames }) {
+/* ---------- more than one image / video per panel ----------
+ * entry.image / entry.video is the cover (what the globe shows);
+ * entry.media holds the rest: [{ image, video?, videoBytes?, frames? }]. */
+async function stageItem(date, { file, video, frames }) {
+  const item = { image: await stageUpload(file, { date }, ENTRY_DIR) };
+  if (video) {
+    item.video = await stageUpload(video, { date }, ENTRY_DIR, { toBucket: R2_ON });
+    item.videoBytes = video.size;
+    item.frames = [];
+    for (const f of frames || []) item.frames.push(await stageUpload(f, { date }, `${ENTRY_DIR}/frames`));
+  }
+  return item;
+}
+/** Files that were never uploaded don't need uploading once they're dropped. */
+function unstageItem(m) {
+  for (const p of [m?.image, m?.video, ...(m?.frames || [])]) if (p && pending.has(p)) unstageUpload(p);
+}
+const extras = (entry) => (Array.isArray(entry.media) ? [...entry.media] : []);
+
+/** Add images / videos after the ones a panel already has. */
+export async function addMedia(entry, items, onProgress) {
+  const list = extras(entry);
+  for (let k = 0; k < items.length; k++) {
+    onProgress?.(k, items.length);
+    list.push(await stageItem(entry.date, items[k]));
+  }
+  patch(entry, 'media', list);
+  return entries.indexOf(entry);
+}
+
+/** Take one image / video off a panel (number 0 is the cover, which can only be replaced). */
+export function removeMedia(entry, i) {
+  const list = extras(entry);
+  if (i < 1 || i > list.length) return;
+  unstageItem(list.splice(i - 1, 1)[0]);
+  patch(entry, 'media', list);
+}
+
+/** Make image / video number i the one the globe shows; the old cover takes its place in the list. */
+export function makeCover(entry, i) {
+  const list = extras(entry);
+  const m = list[i - 1];
+  if (!m) return;
+  const old = { image: entry.image };
+  if (entry.video) Object.assign(old, { video: entry.video, videoBytes: entry.videoBytes, frames: entry.frames });
+  list[i - 1] = Object.fromEntries(Object.entries(old).filter(([, v]) => v != null));
+  patch(entry, 'image', m.image);
+  patch(entry, 'video', m.video || null);
+  patch(entry, 'videoBytes', m.videoBytes || null);
+  patch(entry, 'frames', m.frames || null);
+  patch(entry, 'media', list);
+  window.orbit.refreshPanels();
+}
+
+/** Swap one of a panel's images or videos for a new one (old files stay in the repo / bucket, unused).
+ *  index 0 is the cover the globe shows. */
+export async function replaceMedia(entry, { file, video, frames }, index = 0) {
   const date = entry.date;
+  if (index > 0) {
+    const list = extras(entry);
+    unstageItem(list[index - 1]);
+    list[index - 1] = await stageItem(date, { file, video, frames });
+    patch(entry, 'media', list);
+    return entries.indexOf(entry);
+  }
   // anything being replaced that was never uploaded doesn't need uploading any more
   for (const old of [entry.image, entry.video, ...(entry.frames || [])]) if (old && pending.has(old)) unstageUpload(old);
   patch(entry, 'image', await stageUpload(file, { date }, ENTRY_DIR));
@@ -264,7 +326,7 @@ function updateSavebar(message) {
 }
 
 /* ---------- export ---------- */
-const FIELD_ORDER = ['date', 'title', 'image', 'video', 'videoBytes', 'frames', 'author', 'authorUrl', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
+const FIELD_ORDER = ['date', 'title', 'image', 'video', 'videoBytes', 'frames', 'media', 'author', 'authorUrl', 'note', 'link', 'links', 'keywords', 'similar', 'comments'];
 function cleanEntry(e) {
   const out = {};
   const src = { ...e };

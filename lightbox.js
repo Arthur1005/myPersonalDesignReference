@@ -24,9 +24,8 @@ function panelItems() {
   const st = window.orbit?.state;
   const e = st && st.entries[st.current];
   if (!e) return [];
-  return [
-    { src: resolve(e.image), caption: e.title },
-  ];
+  // every image of the panel (a video shows its still here; pause it and press Magnify for a frame)
+  return window.orbit.mediaOf(e).map((m) => ({ src: resolve(m.image), caption: e.title }));
 }
 
 /** Fit the image inside the viewer at its own proportions. Small photos grow up to 2x; SVGs grow freely. */
@@ -111,7 +110,7 @@ window.addEventListener('keydown', (e) => {
 
 /* ---------- hooks into the card ---------- */
 const cardImg = $('p-image');
-cardImg.addEventListener('click', () => openLightbox(panelItems(), 0));
+cardImg.addEventListener('click', () => openLightbox(panelItems(), window.orbit.state.media || 0));
 cardImg.title = 'Click to enlarge';
 
 

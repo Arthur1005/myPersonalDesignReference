@@ -3,7 +3,7 @@
  *  The panel appears on the globe straight away and is saved to the repo
  *  with everything else when you press "Save to GitHub".
  * ------------------------------------------------------------------ */
-import { editMode, createEntry, replaceMedia, whenReady } from './store.js';
+import { editMode, createEntry, replaceMedia, addMedia, removeMedia, makeCover, whenReady } from './store.js';
 import { R2_ON } from './r2.js';
 
 const $ = (id) => document.getElementById(id);
@@ -190,14 +190,65 @@ shrinkGo.addEventListener('click', async () => {
   }
 });
 
+/** Why a file can't go in, or '' if it can. `extra`: not the first one (extras can't be shrunk). */
+function problemWith(f, extra = false) {
+  const video = isVideo(f);
+  if (!video && !f.type.startsWith('image/')) return `${f.name || 'That'} isn’t an image or a video.`;
+  if (video && R2_ON && f.size > MAX_BUCKET_MB * 1e6) return `${f.name || 'That video'} is ${mb(f.size)} MB. The most one video can be is ${MAX_BUCKET_MB} MB.`;
+  if (extra && video && !R2_ON && f.size > MAX_VIDEO_MB * 1e6) return `${f.name || 'That video'} is over ${MAX_VIDEO_MB} MB. Add it first, on its own, to shrink it.`;
+  return '';
+}
+
+/* ---------- more files after the first ---------- */
+let extras = [];   // [{ file, url }]
+const moreBox = $('add-more');
+const moreList = $('add-more-list');
+function renderExtras() {
+  const many = mode !== 'replace';
+  moreBox.hidden = !many || !file;
+  moreList.innerHTML = '';
+  extras.forEach((x, k) => {
+    const li = document.createElement('li');
+    const media = isVideo(x.file) ? document.createElement('video') : document.createElement('img');
+    if (media.tagName === 'VIDEO') { media.muted = true; media.preload = 'metadata'; media.playsInline = true; }
+    media.src = x.url;
+    media.alt = '';
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'add-more-del';
+    del.setAttribute('aria-label', `Remove ${x.file.name || 'this one'}`);
+    del.textContent = '×';
+    del.addEventListener('click', () => { URL.revokeObjectURL(x.url); extras.splice(k, 1); renderExtras(); });
+    li.append(media, del);
+    moreList.append(li);
+  });
+  const total = (file ? 1 : 0) + extras.length;
+  $('add-more-note').textContent = total > 1
+    ? `${total} in this panel. The big one shows on the globe; the rest are in the card.`
+    : 'Add more images or videos to this panel, or leave it as one.';
+}
+function addExtras(files) {
+  for (const f of files) {
+    const why = problemWith(f, true);
+    if (why) { showErr(errFile, why); continue; }
+    extras.push({ file: f, url: URL.createObjectURL(f) });
+  }
+  renderExtras();
+}
+/** Several files at once: the first one is the main (with preview / shrinking), the rest go after it. */
+function setFiles(list) {
+  const files = [...(list || [])].filter(Boolean);
+  if (!files.length) return;
+  errFile.hidden = true;
+  setFile(files[0]);
+  if (mode !== 'replace') addExtras(files.slice(1));
+}
+
 function setFile(f) {
   if (!f) return;
   const video = isVideo(f);
-  if (!video && !f.type.startsWith('image/')) { showErr(errFile, 'That isn’t an image or a video.'); return; }
-  if (video && R2_ON && f.size > MAX_BUCKET_MB * 1e6) {
-    showErr(errFile, `That video is ${mb(f.size)} MB. The most one video can be is ${MAX_BUCKET_MB} MB.`);
-    return;
-  }
+  const why = problemWith(f);
+  if (why) { showErr(errFile, why); return; }
   file = f;
   original = null;
   window.dispatchEvent(new CustomEvent('orbit:picked', { detail: { file: f, video } }));
@@ -238,6 +289,7 @@ function setFile(f) {
   else { vpreview.removeAttribute('src'); vpreview.load?.(); preview.src = previewUrl; }
   drop.classList.add('has-image');
   $('add-drop-text').innerHTML = video ? '<b>Change video</b>' : '<b>Change image</b>';
+  renderExtras();
   // suggest a title from the file name if none yet
   if (!nameInput.value.trim()) {
     nameInput.value = f.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
@@ -262,7 +314,12 @@ function reset() {
   vpreview.removeAttribute('src');
   vpreview.load?.();
   drop.classList.remove('has-image');
-  $('add-drop-text').innerHTML = '<b>Choose an image or video</b><small>or drop it here · images or video (bigger videos can be shrunk to fit)</small>';
+  $('add-drop-text').innerHTML = mode === 'replace'
+    ? '<b>Choose an image or video</b><small>or drop it here</small>'
+    : '<b>Choose images or videos</b><small>or drop them here · pick several at once · the first one shows on the globe</small>';
+  extras.forEach((x) => URL.revokeObjectURL(x.url));
+  extras = [];
+  renderExtras();
   nameInput.value = '';
   noteInput.value = '';
   $('add-author').value = '';
@@ -272,7 +329,7 @@ function reset() {
   errFile.hidden = errName.hidden = true;
   nameInput.removeAttribute('aria-invalid');
   submit.disabled = false;
-  submit.textContent = 'Light up a panel';
+  submit.textContent = SUBMIT[mode];
 }
 
 function authorUrl() {
@@ -290,7 +347,9 @@ $('add-paste').addEventListener('click', async () => {
       const type = it.types.find((t) => t.startsWith('image/') || t.startsWith('video/'));
       if (!type) continue;
       const blob = await it.getType(type);
-      setFile(new File([blob], `pasted-${localISO()}.${type.split('/')[1].replace('svg+xml', 'svg')}`, { type }));
+      const f = new File([blob], `pasted-${localISO()}.${type.split('/')[1].replace('svg+xml', 'svg')}`, { type });
+      // nothing chosen yet: it becomes the main one; otherwise it's added after
+      if (!file || mode === 'replace') setFile(f); else addExtras([f]);
       return;
     }
     showErr(errFile, 'There’s no image on the clipboard. Copy an image first (right-click → Copy image).');
@@ -300,14 +359,20 @@ $('add-paste').addEventListener('click', async () => {
 });
 for (const id of ['add-author', 'add-author-url']) $(id).addEventListener('input', () => { errName.hidden = true; });
 
-let replacing = null;     // the panel whose image/video is being swapped, or null when adding a new one
+let replacing = null;     // the panel being changed, or null when adding a new one
+let mode = 'new';         // 'new' panel · 'replace' one image/video · 'append' more to a panel
+let slot = 0;             // which image/video is being replaced (0 = the cover)
+const SUBMIT = { new: 'Light up a panel', replace: 'Replace', append: 'Add to this panel' };
 
-function open(entry = null) {
+function open(entry = null, how = entry ? 'replace' : 'new', index = 0) {
+  mode = how;
+  slot = index;
   reset();
   replacing = entry;
   dialog.classList.toggle('replacing', !!entry);
-  $('add-title').textContent = entry ? 'Replace image or video' : 'Add today’s inspiration';
-  submit.textContent = entry ? 'Replace' : 'Light up a panel';
+  fileInput.multiple = mode !== 'replace';
+  $('add-title').textContent = { new: 'Add today’s inspiration', replace: 'Replace image or video', append: 'Add images or videos' }[mode];
+  submit.textContent = SUBMIT[mode];
   dialog.hidden = scrim.hidden = false;
   document.body.classList.add('adding');
   requestAnimationFrame(() => drop.focus?.());
@@ -320,7 +385,45 @@ function close() {
 openBtn.addEventListener('click', () => open());
 $('p-replace').addEventListener('click', () => {
   const st = window.orbit.state;
-  if (st.current >= 0) open(st.entries[st.current]);
+  if (st.current >= 0) open(st.entries[st.current], 'replace', st.media || 0);
+});
+$('p-add-media').addEventListener('click', () => {
+  const st = window.orbit.state;
+  if (st.current >= 0) open(st.entries[st.current], 'append');
+});
+
+/* ---------- in the card: make another one the cover, or take one out ---------- */
+const coverBtn = $('p-cover');
+const removeBtn = $('p-remove');
+window.addEventListener('orbit:media', (ev) => {
+  const { index } = ev.detail;
+  coverBtn.hidden = removeBtn.hidden = index < 1;    // the cover can be replaced, not removed
+  removeBtn.textContent = 'Remove from panel';
+  removeBtn.classList.remove('confirm');
+  $('p-replace').textContent = ev.detail.count > 1 ? 'Replace this one' : 'Replace image or video';
+});
+coverBtn.addEventListener('click', () => {
+  const st = window.orbit.state;
+  const e = st.entries[st.current];
+  if (!e || st.media < 1) return;
+  makeCover(e, st.media);
+  window.orbit.showMedia(0);
+});
+// two taps, so a slip doesn't take one away (and nothing's gone until you save)
+removeBtn.addEventListener('click', () => {
+  const st = window.orbit.state;
+  const e = st.entries[st.current];
+  if (!e || st.media < 1) return;
+  if (!removeBtn.classList.contains('confirm')) {
+    removeBtn.classList.add('confirm');
+    removeBtn.textContent = 'Tap again to remove';
+    clearTimeout(removeBtn._t);
+    removeBtn._t = setTimeout(() => { removeBtn.classList.remove('confirm'); removeBtn.textContent = 'Remove from panel'; }, 3000);
+    return;
+  }
+  const at = st.media;
+  removeMedia(e, at);
+  window.orbit.showMedia(Math.min(at, window.orbit.mediaOf(e).length - 1));
 });
 $('add-close').addEventListener('click', close);
 $('add-cancel').addEventListener('click', close);
@@ -330,14 +433,19 @@ dialog.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') close();
 });
 
-fileInput.addEventListener('change', () => { setFile(fileInput.files[0]); fileInput.value = ''; });
+fileInput.addEventListener('change', () => { setFiles(fileInput.files); fileInput.value = ''; });
+$('add-more-file').addEventListener('change', (e) => { addExtras([...e.target.files]); e.target.value = ''; });
 ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
 ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, () => drop.classList.remove('over')));
-drop.addEventListener('drop', (e) => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
+drop.addEventListener('drop', (e) => { e.preventDefault(); setFiles(e.dataTransfer.files); });
 // paste an image straight from the clipboard
 dialog.addEventListener('paste', (e) => {
-  const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith('image/') || i.type.startsWith('video/'));
-  if (item) { e.preventDefault(); setFile(item.getAsFile()); }
+  const got = [...(e.clipboardData?.items || [])].filter((i) => i.type.startsWith('image/') || i.type.startsWith('video/')).map((i) => i.getAsFile());
+  if (!got.length) return;
+  e.preventDefault();
+  if (!file && mode !== 'replace') setFiles(got);
+  else if (mode === 'replace') setFile(got[0]);
+  else addExtras(got);
 });
 nameInput.addEventListener('input', () => { errName.hidden = true; nameInput.removeAttribute('aria-invalid'); });
 
@@ -358,14 +466,30 @@ dialog.addEventListener('submit', async (e) => {
   if (!ok) return;
   submit.disabled = true;
   submit.textContent = 'Adding…';
+  /** An image as it is; a video with a still and a few frames picked from it. */
+  const prep = async (f, full = f) => {
+    if (!isVideo(f)) return { file: f };
+    const stills = await stillsFrom(full);
+    return { file: stills.poster, video: f, frames: stills.frames };
+  };
   try {
-    const video = isVideo(file) ? file : null;
-    if (video) submit.textContent = 'Picking frames from the video…';
-    const stills = video ? await stillsFrom(original || video) : null;
-    const media = { file: stills ? stills.poster : file, video, frames: stills?.frames };
-    const index = replacing
-      ? await replaceMedia(replacing, media)
-      : await createEntry({
+    if (isVideo(file)) submit.textContent = 'Picking frames from the video…';
+    const media = await prep(file, original || file);
+    const more = [];
+    for (let k = 0; k < extras.length; k++) {
+      submit.textContent = `Preparing ${k + 2} of ${extras.length + 1}…`;
+      more.push(await prep(extras[k].file));
+    }
+    let index;
+    let show = 0;
+    if (mode === 'replace') {
+      index = await replaceMedia(replacing, media, slot);
+      show = slot;
+    } else if (mode === 'append') {
+      show = window.orbit.mediaOf(replacing).length;          // open on the first new one
+      index = await addMedia(replacing, [media, ...more]);
+    } else {
+      index = await createEntry({
         ...media,
         title: nameInput.value,
         date: dateInput.value || localISO(),
@@ -373,14 +497,35 @@ dialog.addEventListener('submit', async (e) => {
         author: $('add-author').value,
         authorUrl: authorUrl(),
       });
+      if (more.length) await addMedia(window.orbit.state.entries[index], more);
+    }
     close();
-    // open the new panel so keywords / links can be added right away
-    setTimeout(() => window.orbit.openEntry(index), 250);
+    // open the panel so keywords / links can be added right away
+    setTimeout(() => { window.orbit.openEntry(index); if (show) window.orbit.showMedia(show); }, 250);
   } catch (err) {
-    showErr(errFile, `Couldn’t ${replacing ? 'replace' : 'add'} it: ${err.message}`);
+    showErr(errFile, `Couldn’t ${mode === 'replace' ? 'replace' : 'add'} it: ${err.message}`);
     submit.disabled = false;
-    submit.textContent = replacing ? 'Replace' : 'Light up a panel';
+    submit.textContent = SUBMIT[mode];
   }
 });
 
 whenReady(() => { openBtn.hidden = !editMode; });
+
+/* ---------- the Edit menu on the card's picture ---------- */
+{
+  const btn = $('m-menu-btn');
+  const menu = $('m-menu');
+  const set = (open) => { menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); };
+  btn.addEventListener('click', () => set(menu.hidden));
+  // close after choosing (Remove and Copy show their result first)
+  menu.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || b.id === 'p-remove' && b.classList.contains('confirm')) return;
+    if (b.id === 'p-copy') { setTimeout(() => set(false), 1400); return; }
+    set(false);
+  });
+  document.addEventListener('pointerdown', (e) => { if (!menu.hidden && !e.target.closest('.media-actions')) set(false); });
+  menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); set(false); btn.focus(); } });
+  window.addEventListener('orbit:media', () => set(false));
+  window.addEventListener('orbit:close', () => set(false));
+}
