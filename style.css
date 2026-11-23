@@ -1720,3 +1720,5 @@ body.editing .comments li { padding-right: 76px; }
 .comments li.pending { opacity: 0.75; border: 1px dashed rgba(42, 107, 255, 0.4); background: rgba(42, 107, 255, 0.03); }
 .wait-tag { margin-left: 6px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
 @media (max-width: 600px) { .v-fields textarea, .v-more input { font-size: 16px; } }
+.v-fields { grid-template-columns: minmax(0, 1fr); }   /* the name box can never push Post off the edge */
+.v-more input { width: 0; }
