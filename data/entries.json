@@ -200,6 +200,36 @@
         "legibility",
         "digital scanning"
       ]
+    },
+    {
+      "id": "2026-11-26|iOS Typewriter Keyboard",
+      "date": "2026-11-26",
+      "title": "iOS Typewriter Keyboard",
+      "image": "entries/2026-11-26-pasted-2026-11-26-1-9tho2.webp",
+      "media": [
+        {
+          "image": "entries/2026-11-26-1920x1920-poster-cn9v0.webp",
+          "video": "https://pub-d17162a0f9b842afb541853412f07e91.r2.dev/videos/2026-11-26-1920x1920-myzt7.mp4",
+          "videoBytes": 4060642,
+          "frames": [
+            "entries/frames/2026-11-26-1920x1920-frame1-v7epl.webp",
+            "entries/frames/2026-11-26-1920x1920-frame2-xuwyy.webp",
+            "entries/frames/2026-11-26-1920x1920-frame3-r7wmu.webp",
+            "entries/frames/2026-11-26-1920x1920-frame4-7ac3d.webp"
+          ]
+        }
+      ],
+      "author": "Soybean°",
+      "authorUrl": "https://x.com/soybonjour",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://recent.design/i/6yx2qw0-ios-typewriter-keyboard"
+        }
+      ],
+      "keywords": [
+        "design precedent"
+      ]
     }
   ]
 }
